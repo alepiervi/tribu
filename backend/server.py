@@ -657,3 +657,233 @@ async def update_itinerary(itinerary_id: str, itinerary_data: ItineraryCreate, c
         raise HTTPException(status_code=404, detail="Itinerary not found")
     
     return Itinerary(**parse_from_mongo(updated_itinerary))
+
+# Cruise specific endpoints
+@api_router.post("/trips/{trip_id}/cruise-info", response_model=CruiseInfo)
+async def create_cruise_info(trip_id: str, cruise_data: CruiseInfoCreate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    cruise_info = CruiseInfo(**cruise_data.dict())
+    cruise_dict = prepare_for_mongo(cruise_info.dict())
+    
+    await db.cruise_info.insert_one(cruise_dict)
+    return cruise_info
+
+@api_router.get("/trips/{trip_id}/cruise-info", response_model=Optional[CruiseInfo])
+async def get_cruise_info(trip_id: str, current_user: dict = Depends(get_current_user)):
+    cruise_info = await db.cruise_info.find_one({"trip_id": trip_id})
+    if cruise_info:
+        return CruiseInfo(**parse_from_mongo(cruise_info))
+    return None
+
+@api_router.put("/cruise-info/{cruise_info_id}", response_model=CruiseInfo)
+async def update_cruise_info(cruise_info_id: str, cruise_data: CruiseInfoCreate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    update_data = prepare_for_mongo(cruise_data.dict())
+    await db.cruise_info.update_one({"id": cruise_info_id}, {"$set": update_data})
+    
+    updated_cruise = await db.cruise_info.find_one({"id": cruise_info_id})
+    if not updated_cruise:
+        raise HTTPException(status_code=404, detail="Cruise info not found")
+    
+    return CruiseInfo(**parse_from_mongo(updated_cruise))
+
+@api_router.get("/trips/{trip_id}/port-schedules", response_model=List[PortSchedule])
+async def get_port_schedules(trip_id: str, current_user: dict = Depends(get_current_user)):
+    schedules = await db.port_schedules.find({"trip_id": trip_id}).to_list(1000)
+    return [PortSchedule(**parse_from_mongo(schedule)) for schedule in schedules]
+
+@api_router.post("/port-schedules", response_model=PortSchedule)
+async def create_port_schedule(schedule_data: PortScheduleCreate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    schedule = PortSchedule(**schedule_data.dict())
+    schedule_dict = prepare_for_mongo(schedule.dict())
+    
+    await db.port_schedules.insert_one(schedule_dict)
+    return schedule
+
+# POI endpoints
+@api_router.get("/pois", response_model=List[POI])
+async def get_pois(category: Optional[POICategory] = None, current_user: dict = Depends(get_current_user)):
+    query = {}
+    if category:
+        query["category"] = category
+    
+    pois = await db.pois.find(query).to_list(1000)
+    return [POI(**parse_from_mongo(poi)) for poi in pois]
+
+@api_router.post("/pois", response_model=POI)
+async def create_poi(poi_data: POICreate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    poi = POI(**poi_data.dict())
+    poi_dict = prepare_for_mongo(poi.dict())
+    
+    await db.pois.insert_one(poi_dict)
+    return poi
+
+# Photo endpoints
+@api_router.post("/trips/{trip_id}/photos")
+async def upload_photo(
+    trip_id: str,
+    file: UploadFile = File(...),
+    caption: str = Form(""),
+    photo_category: PhotoCategory = Form(...),
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user["role"] != "client":
+        # Check if agent owns this trip
+        trip = await db.trips.find_one({"id": trip_id})
+        if not trip or (current_user["role"] == "agent" and trip["agent_id"] != current_user["id"]):
+            raise HTTPException(status_code=403, detail="Not authorized")
+    else:
+        # Check if client owns this trip
+        trip = await db.trips.find_one({"id": trip_id})
+        if not trip or trip["client_id"] != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Create uploads directory if it doesn't exist
+    upload_dir = Path("uploads")
+    upload_dir.mkdir(exist_ok=True)
+    
+    # Save file
+    file_id = str(uuid.uuid4())
+    file_extension = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+    filename = f"{file_id}.{file_extension}"
+    file_path = upload_dir / filename
+    
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    # Save photo info to database
+    photo = ClientPhoto(
+        trip_id=trip_id,
+        client_id=current_user["id"],
+        url=f"/uploads/{filename}",
+        caption=caption,
+        photo_category=photo_category
+    )
+    
+    photo_dict = prepare_for_mongo(photo.dict())
+    await db.client_photos.insert_one(photo_dict)
+    
+    return photo
+
+@api_router.get("/trips/{trip_id}/photos", response_model=List[ClientPhoto])
+async def get_trip_photos(
+    trip_id: str,
+    category: Optional[PhotoCategory] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    query = {"trip_id": trip_id}
+    if category:
+        query["photo_category"] = category
+    
+    photos = await db.client_photos.find(query).to_list(1000)
+    return [ClientPhoto(**parse_from_mongo(photo)) for photo in photos]
+
+# Client notes endpoints
+@api_router.get("/trips/{trip_id}/notes", response_model=List[ClientNote])
+async def get_client_notes(trip_id: str, current_user: dict = Depends(get_current_user)):
+    notes = await db.client_notes.find({"trip_id": trip_id, "client_id": current_user["id"]}).to_list(1000)
+    return [ClientNote(**parse_from_mongo(note)) for note in notes]
+
+@api_router.post("/trips/{trip_id}/notes", response_model=ClientNote)
+async def create_client_note(trip_id: str, note_data: ClientNoteCreate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "client":
+        raise HTTPException(status_code=403, detail="Only clients can create notes")
+    
+    note = ClientNote(**note_data.dict(), client_id=current_user["id"])
+    note_dict = prepare_for_mongo(note.dict())
+    
+    await db.client_notes.insert_one(note_dict)
+    return note
+
+@api_router.put("/notes/{note_id}", response_model=ClientNote)
+async def update_client_note(note_id: str, note_text: str, current_user: dict = Depends(get_current_user)):
+    note = await db.client_notes.find_one({"id": note_id, "client_id": current_user["id"]})
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    
+    update_data = {
+        "note_text": note_text,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.client_notes.update_one({"id": note_id}, {"$set": update_data})
+    updated_note = await db.client_notes.find_one({"id": note_id})
+    
+    return ClientNote(**parse_from_mongo(updated_note))
+
+# Users management (admin only)
+@api_router.get("/users", response_model=List[User])
+async def get_users(current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    users_data = await db.users.find().to_list(1000)
+    
+    # If agent, only show clients they can manage
+    if current_user["role"] == "agent":
+        users_data = [user for user in users_data if user.get("role") == "client"]
+    
+    return [User(**parse_from_mongo(user)) for user in users_data]
+
+@api_router.get("/users/{user_id}", response_model=User)
+async def get_user_by_id(user_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    user_data = await db.users.find_one({"id": user_id})
+    if not user_data:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # If agent, verify they can access this user (only clients)
+    if current_user["role"] == "agent":
+        if user_data.get("role") != "client":
+            raise HTTPException(status_code=403, detail="Not authorized to access this user")
+    
+    return User(**parse_from_mongo(user_data))
+
+# Clients management (admin and agent)
+@api_router.get("/clients", response_model=List[User])
+async def get_clients(current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Get all clients
+    clients = await db.users.find({"role": "client"}).to_list(1000)
+    return [User(**parse_from_mongo(client)) for client in clients]
+
+@api_router.put("/users/{user_id}", response_model=User)
+async def update_user(user_id: str, user_data: UserUpdate, current_user: dict = Depends(get_current_user)):
+    # Check permissions
+    user_to_update = await db.users.find_one({"id": user_id})
+    if not user_to_update:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Permission checks
+    if current_user["role"] == "agent":
+        # Agents can only update clients
+        if user_to_update["role"] != "client":
+            raise HTTPException(status_code=403, detail="Agents can only update clients")
+    elif current_user["role"] == "admin":
+        # Admins can update anyone
+        pass
+    else:
+        # Clients can only update themselves (not implemented here)
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Update user
+    update_data = {k: v for k, v in user_data.dict(exclude_unset=True).items() if v is not None}
+    if update_data:
+        await db.users.update_one({"id": user_id}, {"$set": update_data})
+    
+    updated_user = await db.users.find_one({"id": user_id})
+    return User(**parse_from_mongo(updated_user))
