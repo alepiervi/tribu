@@ -887,3 +887,372 @@ async def update_user(user_id: str, user_data: UserUpdate, current_user: dict = 
     
     updated_user = await db.users.find_one({"id": user_id})
     return User(**parse_from_mongo(updated_user))
+
+@api_router.post("/users/{user_id}/block")
+async def block_user(user_id: str, current_user: dict = Depends(get_current_user)):
+    user_to_block = await db.users.find_one({"id": user_id})
+    if not user_to_block:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Permission checks
+    if current_user["role"] == "agent":
+        # Agents can only block clients
+        if user_to_block["role"] != "client":
+            raise HTTPException(status_code=403, detail="Agents can only block clients")
+    elif current_user["role"] == "admin":
+        # Admins can block anyone except other admins
+        if user_to_block["role"] == "admin" and user_to_block["id"] != current_user["id"]:
+            # Don't allow blocking other admins (prevent lockout)
+            if user_to_block["id"] != current_user["id"]:
+                pass  # Allow for now, but could add more restrictions
+    else:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    await db.users.update_one({"id": user_id}, {"$set": {"blocked": True}})
+    return {"message": "User blocked successfully"}
+
+@api_router.post("/users/{user_id}/unblock")
+async def unblock_user(user_id: str, current_user: dict = Depends(get_current_user)):
+    user_to_unblock = await db.users.find_one({"id": user_id})
+    if not user_to_unblock:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Permission checks (same as block)
+    if current_user["role"] == "agent":
+        if user_to_unblock["role"] != "client":
+            raise HTTPException(status_code=403, detail="Agents can only unblock clients")
+    elif current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    await db.users.update_one({"id": user_id}, {"$set": {"blocked": False}})
+    return {"message": "User unblocked successfully"}
+
+@api_router.delete("/users/{user_id}")
+async def delete_user(user_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    user_to_delete = await db.users.find_one({"id": user_id})
+    if not user_to_delete:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Don't allow deleting yourself
+    if user_id == current_user["id"]:
+        raise HTTPException(status_code=400, detail="Cannot delete yourself")
+    
+    result = await db.users.delete_one({"id": user_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {"message": "User deleted successfully"}
+
+# Dashboard stats
+@api_router.get("/dashboard/stats")
+async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
+    if current_user["role"] == "admin":
+        total_trips = await db.trips.count_documents({})
+        total_users = await db.users.count_documents({})
+        active_trips = await db.trips.count_documents({"status": "active"})
+        
+        return {
+            "total_trips": total_trips,
+            "total_users": total_users,
+            "active_trips": active_trips,
+            "total_photos": await db.client_photos.count_documents({})
+        }
+    elif current_user["role"] == "agent":
+        agent_trips = await db.trips.count_documents({"agent_id": current_user["id"]})
+        active_trips = await db.trips.count_documents({"agent_id": current_user["id"], "status": "active"})
+        
+        return {
+            "my_trips": agent_trips,
+            "active_trips": active_trips,
+            "completed_trips": await db.trips.count_documents({"agent_id": current_user["id"], "status": "completed"})
+        }
+    else:  # client
+        my_trips = await db.trips.count_documents({"client_id": current_user["id"]})
+        my_photos = await db.client_photos.count_documents({"client_id": current_user["id"]})
+        
+        return {
+            "my_trips": my_trips,
+            "my_photos": my_photos,
+            "upcoming_trips": await db.trips.count_documents({
+                "client_id": current_user["id"],
+                "start_date": {"$gte": datetime.now(timezone.utc).isoformat()}
+            })
+        }
+
+# Trip Administration endpoints (Admin/Agent only)
+@api_router.post("/trips/{trip_id}/admin", response_model=TripAdmin)
+async def create_trip_admin(trip_id: str, admin_data: TripAdminCreate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Check if trip exists and user has access
+    trip = await db.trips.find_one({"id": trip_id})
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    if current_user["role"] == "agent" and trip["agent_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Not authorized to manage this trip")
+    
+    # Calculate derived fields
+    admin_dict = prepare_for_mongo(admin_data.dict())
+    calculated_data = calculate_trip_admin_fields(admin_dict)
+    
+    trip_admin = TripAdmin(**calculated_data)
+    admin_dict = prepare_for_mongo(trip_admin.dict())
+    
+    await db.trip_admin.insert_one(admin_dict)
+    return trip_admin
+
+@api_router.get("/trips/{trip_id}/admin", response_model=Optional[TripAdmin])
+async def get_trip_admin(trip_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    trip_admin = await db.trip_admin.find_one({"trip_id": trip_id})
+    if trip_admin:
+        # Get installments and recalculate
+        installments = await db.payment_installments.find({"trip_admin_id": trip_admin["id"]}).to_list(1000)
+        calculated_data = calculate_trip_admin_fields(trip_admin, installments)
+        return TripAdmin(**parse_from_mongo(calculated_data))
+    
+    return None
+
+@api_router.put("/trip-admin/{admin_id}", response_model=TripAdmin)
+async def update_trip_admin(admin_id: str, admin_data: TripAdminUpdate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    existing = await db.trip_admin.find_one({"id": admin_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Trip admin not found")
+    
+    # Update fields
+    update_data = {k: v for k, v in admin_data.dict(exclude_unset=True).items() if v is not None}
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    merged_data = {**existing, **prepare_for_mongo(update_data)}
+    
+    # Get installments and recalculate
+    installments = await db.payment_installments.find({"trip_admin_id": admin_id}).to_list(1000)
+    calculated_data = calculate_trip_admin_fields(merged_data, installments)
+    
+    await db.trip_admin.update_one({"id": admin_id}, {"$set": calculated_data})
+    updated_admin = await db.trip_admin.find_one({"id": admin_id})
+    
+    return TripAdmin(**parse_from_mongo(updated_admin))
+
+# Payment Installments endpoints
+@api_router.post("/trip-admin/{admin_id}/payments", response_model=PaymentInstallment)
+async def create_payment_installment(admin_id: str, payment_data: PaymentInstallmentCreate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    payment = PaymentInstallment(**payment_data.dict())
+    payment_dict = prepare_for_mongo(payment.dict())
+    
+    await db.payment_installments.insert_one(payment_dict)
+    
+    # Recalculate trip admin balance
+    installments = await db.payment_installments.find({"trip_admin_id": admin_id}).to_list(1000)
+    trip_admin = await db.trip_admin.find_one({"id": admin_id})
+    
+    if trip_admin:
+        calculated_data = calculate_trip_admin_fields(trip_admin, installments)
+        await db.trip_admin.update_one({"id": admin_id}, {"$set": {"balance_due": calculated_data["balance_due"]}})
+    
+    return payment
+
+@api_router.get("/trip-admin/{admin_id}/payments", response_model=List[PaymentInstallment])
+async def get_payment_installments(admin_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    payments = await db.payment_installments.find({"trip_admin_id": admin_id}).to_list(1000)
+    return [PaymentInstallment(**parse_from_mongo(payment)) for payment in payments]
+
+@api_router.delete("/payments/{payment_id}")
+async def delete_payment_installment(payment_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Get payment to find admin_id for recalculation
+    payment = await db.payment_installments.find_one({"id": payment_id})
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    
+    admin_id = payment["trip_admin_id"]
+    
+    # Delete payment
+    await db.payment_installments.delete_one({"id": payment_id})
+    
+    # Recalculate trip admin balance
+    installments = await db.payment_installments.find({"trip_admin_id": admin_id}).to_list(1000)
+    trip_admin = await db.trip_admin.find_one({"id": admin_id})
+    
+    if trip_admin:
+        calculated_data = calculate_trip_admin_fields(trip_admin, installments)
+        await db.trip_admin.update_one({"id": admin_id}, {"$set": {"balance_due": calculated_data["balance_due"]}})
+    
+    return {"message": "Payment deleted successfully"}
+
+# Financial Analytics endpoints
+@api_router.get("/analytics/agent-commissions")
+async def get_agent_commission_analytics(
+    year: int = None,
+    agent_id: str = None,
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # If agent, can only see own data
+    if current_user["role"] == "agent":
+        agent_id = current_user["id"]
+    
+    # Build query
+    query = {}
+    if agent_id:
+        # Get trips for this agent
+        agent_trips = await db.trips.find({"agent_id": agent_id}).to_list(1000)
+        trip_ids = [trip["id"] for trip in agent_trips]
+        query["trip_id"] = {"$in": trip_ids}
+    
+    if year:
+        start_date = datetime(year, 1, 1, tzinfo=timezone.utc)
+        end_date = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+        query["practice_confirm_date"] = {
+            "$gte": start_date.isoformat(),
+            "$lt": end_date.isoformat()
+        }
+    
+    # Get confirmed trip admin records
+    query["status"] = "confirmed"
+    confirmed_trips = await db.trip_admin.find(query).to_list(1000)
+    
+    # Parse MongoDB data to remove ObjectIds
+    parsed_trips = [parse_from_mongo(trip) for trip in confirmed_trips]
+    
+    # Calculate totals
+    total_revenue = sum(trip.get("gross_amount", 0) for trip in confirmed_trips)
+    total_gross_commission = sum(trip.get("gross_commission", 0) for trip in confirmed_trips)
+    total_supplier_commission = sum(trip.get("supplier_commission", 0) for trip in confirmed_trips)
+    total_agent_commission = sum(trip.get("agent_commission", 0) for trip in confirmed_trips)
+    
+    return {
+        "year": year or "all_time",
+        "agent_id": agent_id,
+        "total_confirmed_trips": len(confirmed_trips),
+        "total_revenue": total_revenue,
+        "total_gross_commission": total_gross_commission,
+        "total_supplier_commission": total_supplier_commission,
+        "total_agent_commission": total_agent_commission,
+        "trips": parsed_trips
+    }
+
+# Notifications endpoint for payment deadlines
+@api_router.get("/notifications/payment-deadlines")
+async def get_payment_deadlines(current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Get upcoming payment deadlines (next 30 days)
+    today = datetime.now(timezone.utc)
+    thirty_days = today + timedelta(days=30)
+    
+    # Find payment installments due in next 30 days
+    query = {
+        "payment_date": {
+            "$gte": today.isoformat(),
+            "$lte": thirty_days.isoformat()
+        }
+    }
+    
+    # If agent, filter to their trips only
+    if current_user["role"] == "agent":
+        # Get agent's trip admin IDs
+        agent_trips = await db.trips.find({"agent_id": current_user["id"]}).to_list(1000)
+        trip_ids = [trip["id"] for trip in agent_trips]
+        agent_trip_admins = await db.trip_admin.find({"trip_id": {"$in": trip_ids}}).to_list(1000)
+        admin_ids = [admin["id"] for admin in agent_trip_admins]
+        query["trip_admin_id"] = {"$in": admin_ids}
+    
+    upcoming_payments = await db.payment_installments.find(query).to_list(1000)
+    
+    # Get related trip and client information
+    notifications = []
+    for payment in upcoming_payments:
+        # Get trip admin data
+        trip_admin = await db.trip_admin.find_one({"id": payment["trip_admin_id"]})
+        if not trip_admin:
+            continue
+        
+        # Get trip data
+        trip = await db.trips.find_one({"id": trip_admin["trip_id"]})
+        if not trip:
+            continue
+        
+        # Get client data
+        client = await db.users.find_one({"id": trip["client_id"]})
+        if not client:
+            continue
+        
+        # Calculate days until due
+        try:
+            payment_date_str = payment["payment_date"]
+            if isinstance(payment_date_str, str):
+                payment_date = datetime.fromisoformat(payment_date_str.replace('Z', '+00:00'))
+            else:
+                payment_date = payment_date_str
+                if payment_date.tzinfo is None:
+                    payment_date = payment_date.replace(tzinfo=timezone.utc)
+            
+            days_until_due = (payment_date - today).days
+        except Exception as e:
+            print(f"Date parsing error for payment {payment.get('id', 'unknown')}: {e}")
+            continue
+        
+        notifications.append({
+            "id": payment["id"],
+            "type": "payment_deadline",
+            "title": f"Pagamento {payment['payment_type']} in scadenza",
+            "message": f"Cliente {client['first_name']} {client['last_name']} - {trip['title']}",
+            "amount": payment["amount"],
+            "payment_date": payment["payment_date"],
+            "days_until_due": days_until_due,
+            "priority": "high" if days_until_due <= 7 else "medium" if days_until_due <= 14 else "low",
+            "client_name": f"{client['first_name']} {client['last_name']}",
+            "trip_title": trip["title"],
+            "trip_id": trip["id"],
+            "payment_type": payment["payment_type"]
+        })
+    
+    # Sort by priority and days until due
+    priority_order = {"high": 0, "medium": 1, "low": 2}
+    notifications.sort(key=lambda x: (priority_order[x["priority"]], x["days_until_due"]))
+    
+    return {
+        "notifications": notifications,
+        "total_count": len(notifications),
+        "high_priority_count": len([n for n in notifications if n["priority"] == "high"]),
+        "medium_priority_count": len([n for n in notifications if n["priority"] == "medium"]),
+        "low_priority_count": len([n for n in notifications if n["priority"] == "low"])
+    }
+
+# Include router
+app.include_router(api_router)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.on_event("shutdown")
+async def shutdown_db_client():
+    client.close()
