@@ -1,15 +1,18 @@
-from fastapi import FastAPI, APIRouter
-from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Form
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
+from pydantic import BaseModel, Field, EmailStr
+from typing import List, Optional, Dict, Any, Union
+from datetime import datetime, timedelta, timezone
+from passlib.hash import bcrypt
+import jwt
 import os
-import logging
-from pathlib import Path
-from pydantic import BaseModel, Field
-from typing import List
 import uuid
-from datetime import datetime
-
+from dotenv import load_dotenv
+from pathlib import Path
+import shutil
+from enum import Enum
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -19,57 +22,442 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# Create the main app without a prefix
-app = FastAPI()
+# JWT Configuration
+JWT_SECRET = os.environ.get('JWT_SECRET', 'your-secret-key')
+JWT_ALGORITHM = 'HS256'
+security = HTTPBearer()
 
-# Create a router with the /api prefix
+# Create the main app
+app = FastAPI(title="Travel Agency API")
 api_router = APIRouter(prefix="/api")
 
+# Enums
+class UserRole(str, Enum):
+    ADMIN = "admin"
+    AGENT = "agent"
+    CLIENT = "client"
 
-# Define Models
-class StatusCheck(BaseModel):
+class TripType(str, Enum):
+    CRUISE = "cruise"
+    RESORT = "resort"
+    TOUR = "tour"
+    CUSTOM = "custom"
+
+class TripStatus(str, Enum):
+    DRAFT = "draft"
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+class ItineraryType(str, Enum):
+    PORT_DAY = "port_day"
+    SEA_DAY = "sea_day"
+    RESORT_DAY = "resort_day"
+    TOUR_DAY = "tour_day"
+    FREE_DAY = "free_day"
+
+class POICategory(str, Enum):
+    RESTAURANT = "restaurant"
+    ATTRACTION = "attraction"
+    HOTEL = "hotel"
+    ACTIVITY = "activity"
+    TRANSPORT = "transport"
+    SHIP_FACILITY = "ship_facility"
+
+class PhotoCategory(str, Enum):
+    DESTINATION = "destination"
+    SHIP_CABIN = "ship_cabin"
+    SHIP_FACILITIES = "ship_facilities"
+    DINING = "dining"
+    ACTIVITIES = "activities"
+    EXCURSION = "excursion"
+    RESORT_ROOM = "resort_room"
+    RESORT_BEACH = "resort_beach"
+    RESORT_POOL = "resort_pool"
+    TOUR_ATTRACTIONS = "tour_attractions"
+    TOUR_HOTELS = "tour_hotels"
+
+# Models
+class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    email: EmailStr
+    first_name: str
+    last_name: str
+    role: UserRole
+    blocked: bool = False
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-class StatusCheckCreate(BaseModel):
-    client_name: str
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str
+    first_name: str
+    last_name: str
+    role: UserRole = UserRole.CLIENT
 
-# Add your routes to the router instead of directly to app
-@api_router.get("/")
-async def root():
-    return {"message": "Hello World"}
+class UserUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    blocked: Optional[bool] = None
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.dict()
-    status_obj = StatusCheck(**status_dict)
-    _ = await db.status_checks.insert_one(status_obj.dict())
-    return status_obj
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
 
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    status_checks = await db.status_checks.find().to_list(1000)
-    return [StatusCheck(**status_check) for status_check in status_checks]
+class Trip(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
+    destination: str
+    description: str
+    start_date: datetime
+    end_date: datetime
+    client_id: str
+    agent_id: str
+    status: TripStatus = TripStatus.DRAFT
+    trip_type: TripType
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-# Include the router in the main app
-app.include_router(api_router)
+class TripCreate(BaseModel):
+    title: str
+    destination: str
+    description: str
+    start_date: datetime
+    end_date: datetime
+    client_id: str
+    trip_type: TripType
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+class TripUpdate(BaseModel):
+    title: Optional[str] = None
+    destination: Optional[str] = None
+    description: Optional[str] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    client_id: Optional[str] = None
+    trip_type: Optional[TripType] = None
+    status: Optional[TripStatus] = None
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+class Itinerary(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    trip_id: str
+    day_number: int
+    date: datetime
+    title: str
+    description: str
+    itinerary_type: ItineraryType
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
+class ItineraryCreate(BaseModel):
+    trip_id: str
+    day_number: int
+    date: datetime
+    title: str
+    description: str
+    itinerary_type: ItineraryType
+
+class CruiseInfo(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    trip_id: str
+    ship_name: str
+    cabin_number: str
+    departure_time: datetime
+    return_time: datetime
+    ship_facilities: List[str] = []
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class CruiseInfoCreate(BaseModel):
+    trip_id: str
+    ship_name: str
+    cabin_number: str
+    departure_time: datetime
+    return_time: datetime
+    ship_facilities: List[str] = []
+
+class PortSchedule(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    trip_id: str
+    itinerary_id: str
+    port_name: str
+    arrival_time: datetime
+    departure_time: datetime
+    all_aboard_time: datetime
+    transport_info: str = ""
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class PortScheduleCreate(BaseModel):
+    trip_id: str
+    itinerary_id: str
+    port_name: str
+    arrival_time: datetime
+    departure_time: datetime
+    all_aboard_time: datetime
+    transport_info: str = ""
+
+class POI(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    category: POICategory
+    address: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    description: str = ""
+    phone: str = ""
+    website: str = ""
+    price_range: str = ""
+    image_urls: List[str] = []
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class POICreate(BaseModel):
+    name: str
+    category: POICategory
+    address: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    description: str = ""
+    phone: str = ""
+    website: str = ""
+    price_range: str = ""
+    image_urls: List[str] = []
+
+class ItineraryPOI(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    itinerary_id: str
+    poi_id: str
+    order_number: int
+    visit_time: datetime
+    duration_minutes: int
+    transport_type: str = ""
+    transport_duration: int = 0
+    notes: str = ""
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ItineraryPOICreate(BaseModel):
+    itinerary_id: str
+    poi_id: str
+    order_number: int
+    visit_time: datetime
+    duration_minutes: int
+    transport_type: str = ""
+    transport_duration: int = 0
+    notes: str = ""
+
+class ClientPhoto(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    trip_id: str
+    client_id: str
+    url: str
+    caption: str = ""
+    photo_category: PhotoCategory
+    uploaded_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ShipActivity(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    cruise_info_id: str
+    day_date: datetime
+    activity_name: str
+    activity_time: datetime
+    location: str
+    description: str = ""
+    image_url: str = ""
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ShipActivityCreate(BaseModel):
+    cruise_info_id: str
+    day_date: datetime
+    activity_name: str
+    activity_time: datetime
+    location: str
+    description: str = ""
+    image_url: str = ""
+
+class ClientNote(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    trip_id: str
+    client_id: str
+    day_number: int
+    note_text: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ClientNoteCreate(BaseModel):
+    trip_id: str
+    day_number: int
+    note_text: str
+
+# Administrative/Financial Models
+class TripAdmin(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    trip_id: str
+    practice_number: str  # Numero scheda pratica
+    booking_number: str  # Numero prenotazione
+    gross_amount: float  # Importo lordo saldato
+    net_amount: float  # Importo Netto
+    discount: float  # Sconto
+    gross_commission: float  # Commissione lorda (calculated)
+    supplier_commission: float  # Commissione fornitore (calculated 4%)
+    agent_commission: float  # Commissione Agente (calculated)
+    practice_confirm_date: datetime  # Data conferma pratica
+    client_departure_date: datetime  # Data partenza Cliente
+    confirmation_deposit: float  # Acconto versato per conferma
+    balance_due: float  # Saldo da versare (calculated)
+    status: str = "draft"  # draft, confirmed, paid, cancelled
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class TripAdminCreate(BaseModel):
+    trip_id: str
+    practice_number: str
+    booking_number: str
+    gross_amount: float
+    net_amount: float
+    discount: float = 0.0
+    practice_confirm_date: datetime
+    client_departure_date: datetime
+    confirmation_deposit: float = 0.0
+
+class TripAdminUpdate(BaseModel):
+    practice_number: Optional[str] = None
+    booking_number: Optional[str] = None
+    gross_amount: Optional[float] = None
+    net_amount: Optional[float] = None
+    discount: Optional[float] = None
+    practice_confirm_date: Optional[datetime] = None
+    client_departure_date: Optional[datetime] = None
+    confirmation_deposit: Optional[float] = None
+    status: Optional[str] = None
+
+class PaymentInstallment(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    trip_admin_id: str
+    amount: float
+    payment_date: datetime
+    payment_type: str = "installment"  # installment, balance, deposit
+    notes: str = ""
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class PaymentInstallmentCreate(BaseModel):
+    trip_admin_id: str
+    amount: float
+    payment_date: datetime
+    payment_type: str = "installment"
+    notes: str = ""
+
+# Utility functions
+def create_token(user_data: dict) -> str:
+    payload = {
+        "user_id": user_data["id"],
+        "email": user_data["email"],
+        "role": user_data["role"],
+        "exp": datetime.now(timezone.utc) + timedelta(days=7)
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+    try:
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        user = await db.users.find_one({"id": payload["user_id"]})
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        return user
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+def prepare_for_mongo(data):
+    """Convert datetime objects to ISO strings for MongoDB storage"""
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if isinstance(value, datetime):
+                data[key] = value.isoformat()
+            elif isinstance(value, dict):
+                data[key] = prepare_for_mongo(value)
+            elif isinstance(value, list):
+                data[key] = [prepare_for_mongo(item) if isinstance(item, dict) else item for item in value]
+    return data
+
+def calculate_trip_admin_fields(trip_admin_data: dict, installments: List[dict] = None) -> dict:
+    """Calculate derived fields for trip administration"""
+    gross_amount = trip_admin_data.get('gross_amount', 0)
+    net_amount = trip_admin_data.get('net_amount', 0)
+    discount = trip_admin_data.get('discount', 0)
+    confirmation_deposit = trip_admin_data.get('confirmation_deposit', 0)
+    
+    # Calculate commissions
+    gross_commission = gross_amount - discount - net_amount
+    supplier_commission = gross_amount * 0.04  # 4% of gross
+    agent_commission = gross_commission - supplier_commission
+    
+    # Calculate balance due
+    total_paid = confirmation_deposit
+    if installments:
+        total_paid += sum(inst.get('amount', 0) for inst in installments)
+    balance_due = gross_amount - total_paid
+    
+    return {
+        **trip_admin_data,
+        'gross_commission': gross_commission,
+        'supplier_commission': supplier_commission,
+        'agent_commission': agent_commission,
+        'balance_due': balance_due
+    }
+
+def parse_from_mongo(item):
+    """Parse datetime strings from MongoDB back to datetime objects and remove ObjectIds"""
+    if isinstance(item, dict):
+        # Remove MongoDB ObjectId field
+        if '_id' in item:
+            del item['_id']
+        
+        for key, value in item.items():
+            if isinstance(value, str) and 'T' in value and (value.endswith('Z') or '+' in value):
+                try:
+                    item[key] = datetime.fromisoformat(value.replace('Z', '+00:00'))
+                except:
+                    pass
+            elif isinstance(value, dict):
+                item[key] = parse_from_mongo(value)
+            elif isinstance(value, list):
+                item[key] = [parse_from_mongo(subitem) if isinstance(subitem, dict) else subitem for subitem in value]
+    return item
+
+# Authentication endpoints
+@api_router.post("/auth/register")
+async def register(user_data: UserCreate):
+    # Check if user exists
+    existing_user = await db.users.find_one({"email": user_data.email})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Hash password
+    hashed_password = bcrypt.hash(user_data.password)
+    
+    # Create user
+    user = User(**user_data.dict(exclude={"password"}))
+    user_dict = prepare_for_mongo(user.dict())
+    user_dict["hashed_password"] = hashed_password
+    
+    await db.users.insert_one(user_dict)
+    
+    # Create token
+    token = create_token(user_dict)
+    
+    return {"user": user, "token": token}
+
+@api_router.post("/auth/login")
+async def login(login_data: UserLogin):
+    user = await db.users.find_one({"email": login_data.email})
+    if not user or not bcrypt.verify(login_data.password, user["hashed_password"]):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    # Check if user is blocked
+    if user.get("blocked", False):
+        raise HTTPException(status_code=403, detail="Account blocked. Contact administrator.")
+    
+    token = create_token(user)
+    user_response = User(**parse_from_mongo(user))
+    
+    return {"user": user_response, "token": token}
+
+@api_router.get("/auth/me")
+async def get_current_user_info(current_user: dict = Depends(get_current_user)):
+    return User(**parse_from_mongo(current_user))
