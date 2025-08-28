@@ -461,3 +461,199 @@ async def login(login_data: UserLogin):
 @api_router.get("/auth/me")
 async def get_current_user_info(current_user: dict = Depends(get_current_user)):
     return User(**parse_from_mongo(current_user))
+
+# Trip endpoints
+@api_router.get("/trips", response_model=List[Trip])
+async def get_trips(current_user: dict = Depends(get_current_user)):
+    if current_user["role"] == "admin":
+        trips = await db.trips.find().to_list(1000)
+    elif current_user["role"] == "agent":
+        trips = await db.trips.find({"agent_id": current_user["id"]}).to_list(1000)
+    else:  # client
+        trips = await db.trips.find({"client_id": current_user["id"]}).to_list(1000)
+    
+    return [Trip(**parse_from_mongo(trip)) for trip in trips]
+
+@api_router.get("/trips/with-details")
+async def get_trips_with_details(current_user: dict = Depends(get_current_user)):
+    """Get trips with agent and client details"""
+    if current_user["role"] == "admin":
+        trips = await db.trips.find().to_list(1000)
+    elif current_user["role"] == "agent":
+        trips = await db.trips.find({"agent_id": current_user["id"]}).to_list(1000)
+    else:  # client
+        trips = await db.trips.find({"client_id": current_user["id"]}).to_list(1000)
+    
+    # Get all unique user IDs
+    agent_ids = list(set(trip["agent_id"] for trip in trips))
+    client_ids = list(set(trip["client_id"] for trip in trips))
+    
+    # Fetch agents and clients
+    agents = {}
+    if agent_ids:
+        agent_list = await db.users.find({"id": {"$in": agent_ids}}).to_list(1000)
+        agents = {agent["id"]: {
+            "id": agent["id"],
+            "first_name": agent["first_name"],
+            "last_name": agent["last_name"],
+            "email": agent["email"]
+        } for agent in agent_list}
+    
+    clients = {}
+    if client_ids:
+        client_list = await db.users.find({"id": {"$in": client_ids}}).to_list(1000)
+        clients = {client["id"]: {
+            "id": client["id"],
+            "first_name": client["first_name"],
+            "last_name": client["last_name"],
+            "email": client["email"]
+        } for client in client_list}
+    
+    # Combine trip data with user info
+    trips_with_details = []
+    for trip in trips:
+        trip_data = Trip(**parse_from_mongo(trip))
+        agent_info = agents.get(trip["agent_id"])
+        client_info = clients.get(trip["client_id"])
+        
+        trips_with_details.append({
+            "trip": trip_data,
+            "agent": agent_info,
+            "client": client_info
+        })
+    
+    return trips_with_details
+
+@api_router.post("/trips", response_model=Trip)
+async def create_trip(trip_data: TripCreate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized to create trips")
+    
+    trip = Trip(**trip_data.dict(), agent_id=current_user["id"])
+    trip_dict = prepare_for_mongo(trip.dict())
+    
+    await db.trips.insert_one(trip_dict)
+    return trip
+
+@api_router.get("/trips/{trip_id}", response_model=Trip)
+async def get_trip(trip_id: str, current_user: dict = Depends(get_current_user)):
+    trip = await db.trips.find_one({"id": trip_id})
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    # Check permissions
+    if (current_user["role"] == "client" and trip["client_id"] != current_user["id"]) or \
+       (current_user["role"] == "agent" and trip["agent_id"] != current_user["id"]):
+        raise HTTPException(status_code=403, detail="Not authorized to view this trip")
+    
+    return Trip(**parse_from_mongo(trip))
+
+@api_router.get("/trips/{trip_id}/full", response_model=Dict[str, Any])
+async def get_trip_with_details(trip_id: str, current_user: dict = Depends(get_current_user)):
+    """Get trip with agent and client details"""
+    trip = await db.trips.find_one({"id": trip_id})
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    # Check permissions
+    if (current_user["role"] == "client" and trip["client_id"] != current_user["id"]) or \
+       (current_user["role"] == "agent" and trip["agent_id"] != current_user["id"]):
+        raise HTTPException(status_code=403, detail="Not authorized to view this trip")
+    
+    # Get agent details
+    agent = await db.users.find_one({"id": trip["agent_id"]})
+    agent_info = None
+    if agent:
+        agent_info = {
+            "id": agent["id"],
+            "first_name": agent["first_name"],
+            "last_name": agent["last_name"],
+            "email": agent["email"]
+        }
+    
+    # Get client details
+    client = await db.users.find_one({"id": trip["client_id"]})
+    client_info = None
+    if client:
+        client_info = {
+            "id": client["id"],
+            "first_name": client["first_name"],
+            "last_name": client["last_name"],
+            "email": client["email"]
+        }
+    
+    return {
+        "trip": Trip(**parse_from_mongo(trip)),
+        "agent": agent_info,
+        "client": client_info
+    }
+
+@api_router.put("/trips/{trip_id}", response_model=Trip)
+async def update_trip(trip_id: str, trip_data: TripUpdate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized to update trips")
+    
+    trip = await db.trips.find_one({"id": trip_id})
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    # Check if agent is updating their own trip
+    if current_user["role"] == "agent" and trip["agent_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Agents can only update their own trips")
+    
+    # Prepare update data, excluding None values
+    update_data = {}
+    for field, value in trip_data.dict(exclude_unset=True).items():
+        if value is not None:
+            if isinstance(value, datetime):
+                update_data[field] = value.isoformat()
+            else:
+                update_data[field] = value
+    
+    if update_data:
+        await db.trips.update_one({"id": trip_id}, {"$set": update_data})
+    
+    updated_trip = await db.trips.find_one({"id": trip_id})
+    return Trip(**parse_from_mongo(updated_trip))
+
+@api_router.delete("/trips/{trip_id}")
+async def delete_trip(trip_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized to delete trips")
+    
+    result = await db.trips.delete_one({"id": trip_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    return {"message": "Trip deleted successfully"}
+
+# Itinerary endpoints
+@api_router.get("/trips/{trip_id}/itineraries", response_model=List[Itinerary])
+async def get_itineraries(trip_id: str, current_user: dict = Depends(get_current_user)):
+    itineraries = await db.itineraries.find({"trip_id": trip_id}).to_list(1000)
+    return [Itinerary(**parse_from_mongo(itinerary)) for itinerary in itineraries]
+
+@api_router.post("/itineraries", response_model=Itinerary)
+async def create_itinerary(itinerary_data: ItineraryCreate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized to create itineraries")
+    
+    itinerary = Itinerary(**itinerary_data.dict())
+    itinerary_dict = prepare_for_mongo(itinerary.dict())
+    
+    await db.itineraries.insert_one(itinerary_dict)
+    return itinerary
+
+@api_router.put("/itineraries/{itinerary_id}", response_model=Itinerary)
+async def update_itinerary(itinerary_id: str, itinerary_data: ItineraryCreate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized to update itineraries")
+    
+    update_data = prepare_for_mongo(itinerary_data.dict())
+    await db.itineraries.update_one({"id": itinerary_id}, {"$set": update_data})
+    
+    updated_itinerary = await db.itineraries.find_one({"id": itinerary_id})
+    if not updated_itinerary:
+        raise HTTPException(status_code=404, detail="Itinerary not found")
+    
+    return Itinerary(**parse_from_mongo(updated_itinerary))
