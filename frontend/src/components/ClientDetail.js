@@ -231,7 +231,7 @@ const ClientDetail = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {clientTrips.length > 0 ? (
+                {clientTrips && clientTrips.length > 0 ? (
                   <div className="space-y-4">
                     {clientTrips.map((trip) => (
                       <div key={trip.id} className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
