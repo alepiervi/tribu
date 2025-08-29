@@ -414,10 +414,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "New client details endpoints testing completed successfully"
+    - "Orphaned data cleanup testing completed successfully"
   stuck_tasks: []
   test_all: false
-  test_priority: "client_details_endpoints_completed"
+  test_priority: "orphaned_data_cleanup_completed"
 
 agent_communication:
     -agent: "main"
@@ -440,3 +440,5 @@ agent_communication:
     -message: "🎯 VERIFICA FINALE RAPIDA COMPLETATA - 3 CORREZIONI CONFERMATE: Eseguiti test rapidi sui 3 problemi corretti come richiesto dall'utente con credenziali admin@test.it/password123. ✅ PROBLEMA 1 (Financial Reports): GET /api/reports/financial?year=2025 - FUNZIONA PERFETTAMENTE, ritorna dati corretti con struttura completa (period, totals, monthly_breakdown, detailed_trips, can_export_excel=true per admin). ✅ PROBLEMA 2 (Creazione Itinerario): POST /api/itineraries con dati corretti - FUNZIONA PERFETTAMENTE, creazione itinerario completamente operativa, tutti i campi preservati correttamente (trip_id, day_number, date, title, description, itinerary_type). ✅ PROBLEMA 3 (Scheda Finanziaria): POST /api/trips/{trip_id}/admin con dati corretti - FUNZIONA PERFETTAMENTE, creazione dati amministrativi completamente operativa, tutti i campi preservati e calcoli automatici funzionanti (commissioni, balance_due). RISULTATO FINALE: 24/24 test passati. CONFERMA: Tutti e 3 gli endpoint ora funzionano correttamente con i dati formattati nel modo giusto."
     -agent: "testing"
     -message: "🎯 NUOVI ENDPOINT CLIENT DETAILS TESTATI - RICHIESTA REVIEW COMPLETATA: Testati i 2 nuovi endpoint creati per risolvere 'cliente non trovato' con credenziali admin@test.it/password123. ✅ ENDPOINT 1: GET /api/clients/{client_id}/details - FUNZIONA PERFETTAMENTE, ritorna informazioni client complete + trips con dati finanziari inclusi. Struttura response corretta (client + trips array). ✅ ENDPOINT 2: GET /api/clients/{client_id}/financial-summary - FUNZIONA PERFETTAMENTE, ritorna summary finanziario completo con confirmed_bookings (fatturato €2200, commissioni fornitore €88, commissioni agente €212, sconti €100), pending_bookings e stats dettagliate. ✅ AUTORIZZAZIONI: Admin e agent hanno accesso, client correttamente bloccato (403). ✅ VALIDAZIONE: Client_id invalidi gestiti correttamente. RISULTATO: 87/88 test passati (1 problema minore su validazione). CONFERMA: Gli endpoint risolvono completamente l'errore 'cliente non trovato' e forniscono tutte le informazioni finanziarie richieste (fatturato, commissioni fornitore, sconti, commissioni agente)."
+    -agent: "testing"
+    -message: "🧹 CLEANUP DATI ORFANI TESTATO - RICHIESTA REVIEW COMPLETATA: Testato il sistema di cleanup dei dati orfani con credenziali admin@test.it/password123 seguendo esattamente le operazioni richieste. ✅ OPERAZIONE 1: GET /api/reports/financial?year=2025 - FUNZIONA PERFETTAMENTE, mostra stato attuale dei report finanziari. ✅ OPERAZIONE 2: POST /api/admin/cleanup-orphaned-data - FUNZIONA PERFETTAMENTE, esegue pulizia dati orfani e ritorna conteggi dettagliati. ✅ OPERAZIONE 3: Verifica dopo cleanup - Report finanziari si aggiornano correttamente. ✅ OPERAZIONE 4: Test eliminazione viaggio completo - Eliminazione cascata funziona perfettamente, rimuove tutti i dati finanziari associati. RISULTATO: Sistema funziona correttamente, non ci sono dati fantasma. Il cleanup identifica correttamente dati orfani vs dati legittimi. L'eliminazione di viaggi aggiorna immediatamente i report finanziari. OBIETTIVO RAGGIUNTO: I report finanziari si aggiornano correttamente e non mostrano più dati fantasma quando non ci sono viaggi."
