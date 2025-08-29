@@ -261,6 +261,21 @@ backend:
         -agent: "testing"
         -comment: "Sistema richieste preventivo completamente funzionale per tutti i ruoli"
 
+  - task: "API trip details (cruise/resort/tour/custom)"
+    implemented: true
+    working: "needs_testing"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        -working: "NA"
+        -agent: "main"
+        -comment: "Nuova implementazione per salvare dettagli specifici viaggi (cruise/resort/tour/custom) nel TripView"
+        -working: "needs_testing"
+        -agent: "main"
+        -comment: "Implementati modelli CruiseDetails, ResortDetails, TourDetails, CustomTripDetails + endpoint GET /trips/{id}/details e POST per ogni tipo. Sistema create/update completo con autorizzazioni admin/agent. PRONTO PER TEST BACKEND."
+
   - task: "Nuovi endpoint dettagli cliente"
     implemented: true
     working: true
