@@ -28,8 +28,8 @@ const FinancialReports = () => {
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState('');
-  const [selectedAgent, setSelectedAgent] = useState(user.role === 'agent' ? user.id : '');
+  const [selectedMonth, setSelectedMonth] = useState('all');
+  const [selectedAgent, setSelectedAgent] = useState(user.role === 'agent' ? user.id : 'all');
   const [agents, setAgents] = useState([]);
 
   useEffect(() => {
