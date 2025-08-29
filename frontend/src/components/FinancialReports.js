@@ -131,17 +131,12 @@ const FinancialReports = () => {
             </div>
             
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="flex items-center gap-2">
-                <Download className="w-4 h-4" />
-                Esporta PDF
-              </Button>
-              
               {canExportExcel() && (
                 <Button 
                   variant="outline" 
                   size="sm" 
                   className="flex items-center gap-2"
-                  onClick={handleExportExcel}
+                  onClick={() => setShowExportDialog(true)}
                 >
                   <Download className="w-4 h-4" />
                   Esporta Excel
