@@ -126,8 +126,19 @@ const TripView = () => {
 
   const handleQuoteRequest = async () => {
     try {
-      // In un'implementazione reale, questo invierebbe una richiesta al backend
+      const quoteData = {
+        destination: quoteRequest.destination,
+        travel_dates: `${quoteRequest.start_date} - ${quoteRequest.end_date}`,
+        number_of_travelers: parseInt(quoteRequest.travelers),
+        trip_type: 'custom',
+        budget_range: quoteRequest.budget,
+        special_requirements: quoteRequest.preferences,
+        contact_preference: 'email'
+      };
+
+      await axios.post(`${API}/quote-requests`, quoteData);
       toast.success('Richiesta preventivo inviata! Ti contatteremo presto.');
+      
       setShowQuoteRequest(false);
       setQuoteRequest({
         destination: '',
@@ -138,6 +149,7 @@ const TripView = () => {
         preferences: ''
       });
     } catch (error) {
+      console.error('Error sending quote request:', error);
       toast.error('Errore nell\'invio della richiesta');
     }
   };
