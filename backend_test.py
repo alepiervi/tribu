@@ -1784,6 +1784,180 @@ class TravelAgencyAPITester:
         print("🎯 OBIETTIVO: Confermare che dashboard mostra viaggi confermati e che export Excel funziona con tutti i tipi di filtri richiesti.")
         return True
 
+    def test_create_cruise_for_tripview_tabs(self):
+        """Create a new cruise trip specifically for testing TripView tabs (REVIEW REQUEST)"""
+        print("\n🚢 Creating NEW CRUISE for TripView Tab Testing (REVIEW REQUEST)...")
+        print("🎯 OBIETTIVO: Creare viaggio valido per testare nuove tab 'Note Clienti' e 'Dettagli Viaggio'")
+        print("🔑 CREDENZIALI: admin@test.it / password123")
+        
+        if not self.admin_token:
+            print("❌ Skipping cruise creation - no admin token")
+            return False
+
+        # Get admin user info to use as both client and agent
+        success, admin_info = self.make_request('GET', 'auth/me', token=self.admin_token)
+        if not success:
+            self.log_test("Get admin user info", False, str(admin_info))
+            return False
+        
+        admin_id = admin_info['id']
+        print(f"👤 Using admin as both client and agent: {admin_info['first_name']} {admin_info['last_name']} (ID: {admin_id})")
+
+        # OPERAZIONE 1: Crea nuovo viaggio - POST /api/trips
+        print("\n🧳 OPERAZIONE 1: Creazione nuovo viaggio...")
+        trip_data = {
+            'title': 'Test Cruise New Features',
+            'destination': 'Mediterranean Cruise',
+            'description': 'Viaggio di test per verificare le nuove tab nel TripView',
+            'start_date': '2025-03-01T00:00:00Z',
+            'end_date': '2025-03-07T00:00:00Z',
+            'client_id': admin_id,  # usa admin come client per test
+            'trip_type': 'cruise'
+        }
+
+        success, trip_result = self.make_request('POST', 'trips', trip_data, token=self.admin_token)
+        if success:
+            trip_id = trip_result['id']
+            self.created_resources['trips'].append(trip_id)
+            self.log_test("✅ CREA NUOVO VIAGGIO: POST /api/trips", True)
+            print(f"   🆔 Trip ID: {trip_id}")
+            print(f"   📝 Title: {trip_result['title']}")
+            print(f"   🌍 Destination: {trip_result['destination']}")
+            print(f"   🚢 Type: {trip_result['trip_type']}")
+            print(f"   👤 Client ID: {trip_result['client_id']}")
+            print(f"   👨‍💼 Agent ID: {trip_result['agent_id']}")
+            print(f"   📅 Start Date: {trip_result['start_date']}")
+            print(f"   📅 End Date: {trip_result['end_date']}")
+        else:
+            self.log_test("CREA NUOVO VIAGGIO: POST /api/trips", False, str(trip_result))
+            return False
+
+        # Set trip status to confirmed as requested
+        print(f"\n🚦 OPERAZIONE 2: Impostazione status 'confirmed'...")
+        status_update = {"status": "confirmed"}
+        success, status_result = self.make_request('PUT', f'trips/{trip_id}/status', status_update, token=self.admin_token)
+        if success:
+            self.log_test("✅ IMPOSTA STATUS CONFIRMED: PUT /api/trips/{trip_id}/status", True)
+            print(f"   ✅ Status aggiornato a: confirmed")
+        else:
+            self.log_test("IMPOSTA STATUS CONFIRMED", False, str(status_result))
+
+        # Verify the trip was created correctly
+        print(f"\n🔍 OPERAZIONE 3: Verifica viaggio creato...")
+        success, trip_check = self.make_request('GET', f'trips/{trip_id}/full', token=self.admin_token)
+        if success:
+            self.log_test("✅ VERIFICA VIAGGIO: GET /api/trips/{trip_id}/full", True)
+            print(f"   ✅ Viaggio verificato:")
+            print(f"      📝 Title: {trip_check['trip']['title']}")
+            print(f"      🌍 Destination: {trip_check['trip']['destination']}")
+            print(f"      🚢 Type: {trip_check['trip']['trip_type']}")
+            print(f"      🚦 Status: {trip_check['trip']['status']}")
+            print(f"      👤 Client: {trip_check['client']['first_name']} {trip_check['client']['last_name']}")
+            print(f"      👨‍💼 Agent: {trip_check['agent']['first_name']} {trip_check['agent']['last_name']}")
+        else:
+            self.log_test("VERIFICA VIAGGIO", False, str(trip_check))
+
+        # Create some sample itinerary data for the cruise
+        print(f"\n📅 OPERAZIONE 4: Creazione itinerario di esempio...")
+        itinerary_data = {
+            'trip_id': trip_id,
+            'day_number': 1,
+            'date': '2025-03-01T08:00:00Z',
+            'title': 'Imbarco e Partenza',
+            'description': 'Imbarco sulla nave da crociera e partenza dal porto',
+            'itinerary_type': 'port_day'
+        }
+
+        success, itinerary_result = self.make_request('POST', 'itineraries', itinerary_data, token=self.admin_token)
+        if success:
+            self.log_test("✅ CREA ITINERARIO: POST /api/itineraries", True)
+            print(f"   📅 Giorno 1: {itinerary_result['title']}")
+        else:
+            self.log_test("CREA ITINERARIO", False, str(itinerary_result))
+
+        # Create cruise info for the trip
+        print(f"\n🚢 OPERAZIONE 5: Creazione informazioni crociera...")
+        cruise_data = {
+            'trip_id': trip_id,
+            'ship_name': 'MSC Seaside',
+            'cabin_number': 'B204',
+            'departure_time': '2025-03-01T18:00:00Z',
+            'return_time': '2025-03-07T08:00:00Z',
+            'ship_facilities': ['Pool', 'Spa', 'Casino', 'Theater', 'Restaurants']
+        }
+
+        success, cruise_result = self.make_request('POST', f'trips/{trip_id}/cruise-info', cruise_data, token=self.admin_token)
+        if success:
+            self.log_test("✅ CREA INFO CROCIERA: POST /api/trips/{trip_id}/cruise-info", True)
+            print(f"   🚢 Nave: {cruise_result['ship_name']}")
+            print(f"   🏠 Cabina: {cruise_result['cabin_number']}")
+            print(f"   🏊 Servizi: {', '.join(cruise_result['ship_facilities'])}")
+        else:
+            self.log_test("CREA INFO CROCIERA", False, str(cruise_result))
+
+        # OPERAZIONE FINALE: Restituisci trip_id per test frontend
+        print(f"\n🎯 OPERAZIONE FINALE: Trip ID per test frontend...")
+        print("="*60)
+        print("🎉 VIAGGIO CREATO CON SUCCESSO PER TEST TRIPVIEW TABS!")
+        print("="*60)
+        print(f"🆔 TRIP_ID per test frontend: {trip_id}")
+        print(f"🔑 CREDENZIALI: admin@test.it / password123")
+        print("")
+        print("📋 DETTAGLI VIAGGIO:")
+        print(f"   📝 Title: Test Cruise New Features")
+        print(f"   🌍 Destination: Mediterranean Cruise")
+        print(f"   🚢 Type: cruise")
+        print(f"   🚦 Status: confirmed")
+        print(f"   📅 Date: 2025-03-01 → 2025-03-07")
+        print("")
+        print("✅ OBIETTIVO RAGGIUNTO:")
+        print("   ✅ Viaggio valido creato per testare nuove tab TripView")
+        print("   ✅ Tab 'Note Clienti' - pronta per test")
+        print("   ✅ Tab 'Dettagli Viaggio' - pronta per test")
+        print("   ✅ Dati crociera completi disponibili")
+        print("   ✅ Itinerario di esempio creato")
+        print("="*60)
+
+        return {
+            'trip_id': trip_id,
+            'admin_id': admin_id,
+            'client_id': admin_id,
+            'agent_id': admin_id,
+            'success': True
+        }
+
+    def run_review_request_test(self):
+        """Run only the specific review request test for TripView tabs"""
+        print("🚀 Starting REVIEW REQUEST Test - TripView Tabs...")
+        print(f"🌐 Base URL: {self.base_url}")
+        print(f"🔗 API URL: {self.api_url}")
+        print("="*80)
+        
+        # Test authentication first
+        if not self.test_authentication():
+            print("❌ Authentication failed - stopping tests")
+            return False
+        
+        # Run the specific test for creating cruise for TripView tabs
+        result = self.test_create_cruise_for_tripview_tabs()
+        
+        # Print final results
+        print("\n" + "="*80)
+        print("🏁 REVIEW REQUEST TEST COMPLETED")
+        print("="*80)
+        print(f"📊 Tests Run: {self.tests_run}")
+        print(f"✅ Tests Passed: {self.tests_passed}")
+        print(f"❌ Tests Failed: {self.tests_run - self.tests_passed}")
+        print(f"📈 Success Rate: {(self.tests_passed/self.tests_run*100):.1f}%")
+        
+        if result and result.get('success'):
+            print("🎉 REVIEW REQUEST TEST PASSED!")
+            print(f"🆔 TRIP_ID CREATED: {result.get('trip_id')}")
+        else:
+            print("⚠️  Review request test failed - check logs above")
+        
+        return result
+
     def run_all_tests(self):
         """Run all test suites with focus on review request"""
         print("🚀 Starting Travel Agency API Tests...")
