@@ -1673,22 +1673,28 @@ class TravelAgencyAPITester:
         """Run all test suites with focus on review request"""
         print("🚀 Starting Travel Agency API Tests...")
         print(f"Testing against: {self.base_url}")
-        print("🎯 FOCUS: Testing REVIEW REQUEST functionalities")
+        print("🎯 FOCUS: Testing REVIEW REQUEST BUG FIX")
         
         # Test authentication first with provided credentials
         if not self.test_authentication():
             print("❌ Authentication tests failed - stopping")
             return False
 
-        # PRIORITY: Test the specific review request functionalities FIRST
+        # PRIORITY 1: Test the specific bug fix FIRST
         print("\n" + "="*60)
-        print("🎯 REVIEW REQUEST SPECIFIC TESTS (PRIMARY FOCUS)")
+        print("🎯 BUG FIX TEST: Trip Confirmed → Financial Reports (PRIMARY FOCUS)")
+        print("="*60)
+        self.test_trip_confirmed_status_financial_reports_fix()
+
+        # PRIORITY 2: Test the review request functionalities
+        print("\n" + "="*60)
+        print("🎯 REVIEW REQUEST SPECIFIC TESTS (SECONDARY FOCUS)")
         print("="*60)
         self.test_review_request_specific()
 
-        # PRIORITY: Test all new endpoints comprehensively
+        # PRIORITY 3: Test all new endpoints comprehensively
         print("\n" + "="*60)
-        print("🆕 TESTING NEW ENDPOINTS (SECONDARY FOCUS)")
+        print("🆕 TESTING NEW ENDPOINTS (TERTIARY FOCUS)")
         print("="*60)
         self.test_new_endpoints_comprehensive()
 
