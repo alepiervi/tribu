@@ -44,6 +44,9 @@ const TripView = () => {
   const [newNote, setNewNote] = useState({ day_number: 1, note_text: '' });
   const [showNewNoteDialog, setShowNewNoteDialog] = useState(false);
   const [showQuoteRequest, setShowQuoteRequest] = useState(false);
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
+  const [newStatus, setNewStatus] = useState('');
+
   const [quoteRequest, setQuoteRequest] = useState({
     destination: '',
     start_date: '',
