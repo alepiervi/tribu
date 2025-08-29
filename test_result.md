@@ -566,6 +566,16 @@ metadata:
   new_features_agent_filtering_status: "agent_filtering_by_client_relationship_working"
   new_features_enriched_data_status: "client_name_email_phone_included_in_responses"
   new_features_credentials_tested: "admin@test.it / password123, agent1@test.it / password123"
+  frontend_integration_tested: true
+  frontend_integration_test_date: "2025-01-11"
+  frontend_integration_test_status: "all_3_new_features_working_perfectly_in_frontend"
+  frontend_integration_tests_passed: "comprehensive_ui_test_successful"
+  frontend_integration_campo_cellulare_status: "phone_field_present_in_forms_and_user_list"
+  frontend_integration_delete_buttons_status: "delete_buttons_present_and_functional"
+  frontend_integration_agent_filtering_status: "admin_9_requests_agent_0_requests_filtering_working"
+  frontend_integration_enriched_data_status: "client_name_email_visible_in_all_requests"
+  frontend_backend_url_fixed: true
+  frontend_backend_url_correction: "changed_from_https_None_to_http_localhost_8001"
 
 test_plan:
   current_focus:
