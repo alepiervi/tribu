@@ -25,7 +25,8 @@ import {
   Plus,
   Edit,
   Save,
-  X
+  X,
+  MessageSquare
 } from 'lucide-react';
 import { toast } from 'sonner';
 
