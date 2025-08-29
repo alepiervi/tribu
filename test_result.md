@@ -137,11 +137,11 @@ backend:
 
   - task: "Fix errore client not found"
     implemented: true
-    working: "needs_testing"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         -working: false
         -agent: "user"
@@ -149,6 +149,9 @@ backend:
         -working: "needs_testing"
         -agent: "main"
         -comment: "Endpoint esistente, probabilmente problema nel frontend"
+        -working: true
+        -agent: "testing"
+        -comment: "✅ TESTATO: Endpoint /api/users/{user_id} funziona correttamente. Admin e Agent possono accedere ai dettagli utenti. Nessun errore 'client not found' nel backend. Il problema è probabilmente nel frontend."
 
   - task: "Creazione schede finanziarie"
     implemented: true
