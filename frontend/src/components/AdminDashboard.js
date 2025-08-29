@@ -238,6 +238,19 @@ const AdminDashboard = () => {
                 </Button>
               </Link>
 
+              <Link to="/quote-requests">
+                <Button
+                  className="flex items-center gap-3 h-auto p-4 w-full bg-teal-50 text-teal-700 border border-teal-200 hover:bg-teal-100"
+                  variant="outline"
+                >
+                  <MessageSquare className="w-5 h-5" />
+                  <div className="text-left">
+                    <div className="font-medium">Richieste Preventivo</div>
+                    <div className="text-sm text-teal-600">Gestione preventivi clienti</div>
+                  </div>
+                </Button>
+              </Link>
+
               <Link to="/notifications">
                 <Button
                   className="flex items-center gap-3 h-auto p-4 w-full bg-red-50 text-red-700 border border-red-200 hover:bg-red-100"
