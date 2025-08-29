@@ -1479,6 +1479,52 @@ async def update_quote_request(
     await db.quote_requests.update_one({"id": request_id}, {"$set": update_dict})
     return {"message": "Quote request updated successfully"}
 
+# User Management - Block/Unblock and Delete functionality
+@api_router.post("/users/{user_id}/block")
+async def block_user(user_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin"]:
+        raise HTTPException(status_code=403, detail="Only admins can block users")
+    
+    user_to_block = await db.users.find_one({"id": user_id})
+    if not user_to_block:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user_to_block["role"] == "admin":
+        raise HTTPException(status_code=403, detail="Cannot block admin users")
+    
+    await db.users.update_one({"id": user_id}, {"$set": {"blocked": True, "blocked_at": datetime.now(timezone.utc).isoformat()}})
+    return {"message": "User blocked successfully"}
+
+@api_router.post("/users/{user_id}/unblock")
+async def unblock_user(user_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin"]:
+        raise HTTPException(status_code=403, detail="Only admins can unblock users")
+    
+    await db.users.update_one({"id": user_id}, {"$set": {"blocked": False, "unblocked_at": datetime.now(timezone.utc).isoformat()}})
+    return {"message": "User unblocked successfully"}
+
+@api_router.delete("/users/{user_id}")
+async def delete_user(user_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin"]:
+        raise HTTPException(status_code=403, detail="Only admins can delete users")
+    
+    user_to_delete = await db.users.find_one({"id": user_id})
+    if not user_to_delete:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user_to_delete["role"] == "admin":
+        raise HTTPException(status_code=403, detail="Cannot delete admin users")
+    
+    if user_to_delete["id"] == current_user["id"]:
+        raise HTTPException(status_code=403, detail="Cannot delete yourself")
+    
+    # Delete user and related data
+    await db.users.delete_one({"id": user_id})
+    await db.client_notes.delete_many({"client_id": user_id})
+    await db.quote_requests.delete_many({"client_id": user_id})
+    
+    return {"message": "User deleted successfully"}
+
 # Notifications endpoint for payment deadlines
 @api_router.get("/notifications/payment-deadlines")
 async def get_payment_deadlines(current_user: dict = Depends(get_current_user)):
