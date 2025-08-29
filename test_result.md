@@ -118,8 +118,8 @@ backend:
         -comment: "Admin/Agent non possono modificare itinerario/informazioni cruise nei dettagli viaggio"
 
   - task: "Report finanziari completi"
-    implemented: false
-    working: false
+    implemented: true
+    working: "needs_testing"
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
@@ -128,10 +128,13 @@ backend:
         -working: false
         -agent: "user"
         -comment: "Report finanziari non funzionali, necessari breakdown annuali/mensili con fatturato lordo, commissioni, sconti, partenze clienti"
+        -working: "needs_testing"
+        -agent: "main"
+        -comment: "Aggiunto endpoint /reports/financial con breakdown mensili/annuali completi e controllo export Excel per agenti"
 
   - task: "Fix errore client not found"
     implemented: true
-    working: false
+    working: "needs_testing"
     file: "/app/backend/server.py"
     stuck_count: 1
     priority: "high"
@@ -140,10 +143,13 @@ backend:
         -working: false
         -agent: "user"
         -comment: "Errore 'client not found' nel dettaglio utente della gestione utenti"
+        -working: "needs_testing"
+        -agent: "main"
+        -comment: "Endpoint esistente, probabilmente problema nel frontend"
 
   - task: "Creazione schede finanziarie"
-    implemented: false
-    working: false
+    implemented: true
+    working: "needs_testing"
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "medium"
@@ -152,10 +158,13 @@ backend:
         -working: false
         -agent: "user"
         -comment: "Impossibile creare e salvare schede finanziarie"
+        -working: "needs_testing"
+        -agent: "main"
+        -comment: "Aggiunti endpoint /financial-sheets per CRUD completo delle schede finanziarie"
 
   - task: "Stato viaggi oltre draft"
     implemented: true
-    working: false
+    working: "needs_testing"
     file: "/app/backend/server.py"
     stuck_count: 1
     priority: "high"
@@ -164,10 +173,13 @@ backend:
         -working: false
         -agent: "user"
         -comment: "I viaggi creati rimangono in stato 'draft'"
+        -working: "needs_testing"
+        -agent: "main"
+        -comment: "Aggiunto endpoint /trips/{trip_id}/status per gestire cambio stati viaggi con validazione"
 
   - task: "API modifica note clienti"
     implemented: true
-    working: false
+    working: "needs_testing"
     file: "/app/backend/server.py"
     stuck_count: 1
     priority: "medium"
@@ -176,18 +188,24 @@ backend:
         -working: false
         -agent: "user"
         -comment: "Note clienti devono essere modificabili e visibili a agent/admin"
+        -working: "needs_testing"
+        -agent: "main"
+        -comment: "Modificati endpoint notes per permettere visibilità admin/agent e edit per tutti i ruoli autorizzati"
 
   - task: "API richiesta preventivo"
-    implemented: false
-    working: "NA"
+    implemented: true
+    working: "needs_testing"
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         -working: "NA"
         -agent: "main"
         -comment: "Nuova feature da implementare per richieste preventivo viaggi futuri"
+        -working: "needs_testing"
+        -agent: "main"
+        -comment: "Implementati endpoint /quote-requests per CRUD completo richieste preventivo"
 
 frontend:
   - task: "TripView modifica itinerario/cruise"
