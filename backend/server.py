@@ -1151,6 +1151,7 @@ async def get_agent_commission_analytics(
     total_gross_commission = sum(trip.get("gross_commission", 0) for trip in confirmed_trips)
     total_supplier_commission = sum(trip.get("supplier_commission", 0) for trip in confirmed_trips)
     total_agent_commission = sum(trip.get("agent_commission", 0) for trip in confirmed_trips)
+    total_discounts = sum(trip.get("discount", 0) for trip in confirmed_trips)
     
     return {
         "year": year or "all_time",
@@ -1160,8 +1161,281 @@ async def get_agent_commission_analytics(
         "total_gross_commission": total_gross_commission,
         "total_supplier_commission": total_supplier_commission,
         "total_agent_commission": total_agent_commission,
+        "total_discounts": total_discounts,
         "trips": parsed_trips
     }
+
+# Complete Financial Reports with monthly/annual breakdowns
+@api_router.get("/reports/financial")
+async def get_financial_reports(
+    year: int = None,
+    month: int = None,
+    agent_id: str = None,
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # If agent, can only see own data
+    if current_user["role"] == "agent":
+        agent_id = current_user["id"]
+    
+    # Build date query
+    date_query = {}
+    if year:
+        start_date = datetime(year, 1, 1, tzinfo=timezone.utc)
+        if month:
+            # Specific month
+            if month == 12:
+                end_date = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+            else:
+                end_date = datetime(year, month + 1, 1, tzinfo=timezone.utc)
+            start_date = datetime(year, month, 1, tzinfo=timezone.utc)
+        else:
+            # Entire year
+            end_date = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+        
+        date_query = {
+            "$gte": start_date.isoformat(),
+            "$lt": end_date.isoformat()
+        }
+    
+    # Build main query
+    query = {"status": "confirmed"}
+    if date_query:
+        query["practice_confirm_date"] = date_query
+    
+    if agent_id:
+        agent_trips = await db.trips.find({"agent_id": agent_id}).to_list(1000)
+        trip_ids = [trip["id"] for trip in agent_trips]
+        query["trip_id"] = {"$in": trip_ids}
+    
+    # Get confirmed trips
+    confirmed_trips = await db.trip_admin.find(query).to_list(1000)
+    parsed_trips = [parse_from_mongo(trip) for trip in confirmed_trips]
+    
+    # Calculate monthly breakdowns if year provided but no specific month
+    monthly_data = []
+    if year and not month:
+        for m in range(1, 13):
+            month_start = datetime(year, m, 1, tzinfo=timezone.utc)
+            if m == 12:
+                month_end = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+            else:
+                month_end = datetime(year, m + 1, 1, tzinfo=timezone.utc)
+            
+            month_query = query.copy()
+            month_query["practice_confirm_date"] = {
+                "$gte": month_start.isoformat(),
+                "$lt": month_end.isoformat()
+            }
+            
+            month_trips = await db.trip_admin.find(month_query).to_list(1000)
+            
+            monthly_summary = {
+                "month": m,
+                "month_name": month_start.strftime("%B"),
+                "total_trips": len(month_trips),
+                "gross_revenue": sum(trip.get("gross_amount", 0) for trip in month_trips),
+                "total_discounts": sum(trip.get("discount", 0) for trip in month_trips),
+                "supplier_commissions": sum(trip.get("supplier_commission", 0) for trip in month_trips),
+                "agent_commissions": sum(trip.get("agent_commission", 0) for trip in month_trips),
+                "client_departures": len(set(trip.get("trip_id", "") for trip in month_trips))
+            }
+            monthly_data.append(monthly_summary)
+    
+    # Calculate totals
+    totals = {
+        "total_trips": len(confirmed_trips),
+        "gross_revenue": sum(trip.get("gross_amount", 0) for trip in confirmed_trips),
+        "total_discounts": sum(trip.get("discount", 0) for trip in confirmed_trips),
+        "supplier_commissions": sum(trip.get("supplier_commission", 0) for trip in confirmed_trips),
+        "agent_commissions": sum(trip.get("agent_commission", 0) for trip in confirmed_trips),
+        "net_revenue": sum(trip.get("net_amount", 0) for trip in confirmed_trips),
+        "client_departures": len(set(trip.get("trip_id", "") for trip in confirmed_trips))
+    }
+    
+    return {
+        "period": {
+            "year": year,
+            "month": month,
+            "agent_id": agent_id
+        },
+        "totals": totals,
+        "monthly_breakdown": monthly_data,
+        "detailed_trips": parsed_trips,
+        "can_export_excel": current_user["role"] == "admin"  # Only admin can export to Excel
+    }
+
+# Financial Sheets Management
+@api_router.post("/financial-sheets")
+async def create_financial_sheet(
+    sheet_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    sheet = {
+        "id": str(uuid.uuid4()),
+        "created_by": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "title": sheet_data.get("title", "Scheda Finanziaria"),
+        "description": sheet_data.get("description", ""),
+        "year": sheet_data.get("year"),
+        "month": sheet_data.get("month"),
+        "agent_id": sheet_data.get("agent_id"),
+        "data": sheet_data.get("data", {}),
+        "status": "draft"
+    }
+    
+    await db.financial_sheets.insert_one(sheet)
+    return {"message": "Financial sheet created successfully", "sheet_id": sheet["id"]}
+
+@api_router.get("/financial-sheets")
+async def get_financial_sheets(current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    query = {}
+    if current_user["role"] == "agent":
+        query = {"$or": [{"created_by": current_user["id"]}, {"agent_id": current_user["id"]}]}
+    
+    sheets = await db.financial_sheets.find(query).to_list(1000)
+    return [parse_from_mongo(sheet) for sheet in sheets]
+
+@api_router.put("/financial-sheets/{sheet_id}")
+async def update_financial_sheet(
+    sheet_id: str,
+    sheet_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Check if sheet exists and user has permission
+    sheet = await db.financial_sheets.find_one({"id": sheet_id})
+    if not sheet:
+        raise HTTPException(status_code=404, detail="Financial sheet not found")
+    
+    if current_user["role"] == "agent":
+        if sheet["created_by"] != current_user["id"] and sheet.get("agent_id") != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Not authorized to update this sheet")
+    
+    update_data = {
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "updated_by": current_user["id"]
+    }
+    update_data.update(sheet_data)
+    
+    await db.financial_sheets.update_one({"id": sheet_id}, {"$set": update_data})
+    return {"message": "Financial sheet updated successfully"}
+
+# Trip Status Management - Fix for draft status issue
+@api_router.put("/trips/{trip_id}/status")
+async def update_trip_status(
+    trip_id: str,
+    status_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    trip = await db.trips.find_one({"id": trip_id})
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    # Check if agent owns this trip
+    if current_user["role"] == "agent" and trip["agent_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Not authorized to update this trip")
+    
+    new_status = status_data.get("status")
+    if new_status not in ["draft", "active", "completed", "cancelled"]:
+        raise HTTPException(status_code=400, detail="Invalid status")
+    
+    update_data = {
+        "status": new_status,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "updated_by": current_user["id"]
+    }
+    
+    # If activating a trip, ensure it has minimum required data
+    if new_status == "active":
+        if not trip.get("title") or not trip.get("client_id"):
+            raise HTTPException(status_code=400, detail="Trip must have title and client to be activated")
+    
+    await db.trips.update_one({"id": trip_id}, {"$set": update_data})
+    return {"message": f"Trip status updated to {new_status}"}
+
+# Quote Request Feature
+@api_router.post("/quote-requests")
+async def create_quote_request(
+    request_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user["role"] != "client":
+        raise HTTPException(status_code=403, detail="Only clients can create quote requests")
+    
+    quote_request = {
+        "id": str(uuid.uuid4()),
+        "client_id": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "destination": request_data.get("destination", ""),
+        "travel_dates": request_data.get("travel_dates", ""),
+        "number_of_travelers": request_data.get("number_of_travelers", 1),
+        "trip_type": request_data.get("trip_type", "custom"),
+        "budget_range": request_data.get("budget_range", ""),
+        "special_requirements": request_data.get("special_requirements", ""),
+        "contact_preference": request_data.get("contact_preference", "email"),
+        "status": "pending",
+        "notes": request_data.get("notes", "")
+    }
+    
+    await db.quote_requests.insert_one(quote_request)
+    
+    return {
+        "message": "Quote request submitted successfully",
+        "request_id": quote_request["id"]
+    }
+
+@api_router.get("/quote-requests")
+async def get_quote_requests(current_user: dict = Depends(get_current_user)):
+    if current_user["role"] == "client":
+        # Clients see only their own requests
+        requests = await db.quote_requests.find({"client_id": current_user["id"]}).to_list(1000)
+    elif current_user["role"] in ["admin", "agent"]:
+        # Admin and agents see all requests
+        requests = await db.quote_requests.find().to_list(1000)
+    else:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    return [parse_from_mongo(request) for request in requests]
+
+@api_router.put("/quote-requests/{request_id}")
+async def update_quote_request(
+    request_id: str,
+    update_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    request = await db.quote_requests.find_one({"id": request_id})
+    if not request:
+        raise HTTPException(status_code=404, detail="Quote request not found")
+    
+    # Authorization check
+    if current_user["role"] == "client":
+        if request["client_id"] != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Not authorized")
+    elif current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    update_dict = {
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "updated_by": current_user["id"]
+    }
+    update_dict.update(update_data)
+    
+    await db.quote_requests.update_one({"id": request_id}, {"$set": update_dict})
+    return {"message": "Quote request updated successfully"}
 
 # Notifications endpoint for payment deadlines
 @api_router.get("/notifications/payment-deadlines")
