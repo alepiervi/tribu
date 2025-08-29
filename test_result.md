@@ -405,12 +405,12 @@ frontend:
 
 metadata:
   created_by: "main_agent"
-  version: "1.6"
-  test_sequence: 6
+  version: "1.7"
+  test_sequence: 7
   run_ui: true
   backend_testing_completed: true
   backend_test_date: "2025-01-11"
-  backend_tests_passed: "90/94"
+  backend_tests_passed: "91/94"
   frontend_testing_completed: true
   frontend_test_date: "2025-01-11"
   frontend_tests_status: "5_critical_issues_found"
@@ -430,6 +430,10 @@ metadata:
   orphaned_data_cleanup_test_date: "2025-01-11"
   orphaned_data_cleanup_status: "cleanup_system_working_correctly"
   orphaned_data_cleanup_tests_passed: "comprehensive_test_successful"
+  payment_registration_tested: true
+  payment_registration_test_date: "2025-01-11"
+  payment_registration_status: "core_functionality_working_correctly"
+  payment_registration_tests_passed: "9/12"
 
 test_plan:
   current_focus:
