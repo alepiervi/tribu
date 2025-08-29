@@ -303,6 +303,17 @@ const QuoteRequests = () => {
                                 Inviata il: {formatDate(request.responded_at)}
                               </p>
                             )}
+                            <div className="mt-3 pt-3 border-t border-blue-200">
+                              <Button 
+                                size="sm" 
+                                variant="destructive"
+                                onClick={() => handleDeleteRequest(request.id)}
+                                className="flex items-center gap-2"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                Elimina Richiesta
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       )}
