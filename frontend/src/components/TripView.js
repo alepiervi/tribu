@@ -101,6 +101,7 @@ const TripView = () => {
       // Cruise info per admin/agent
       if (user.role !== 'client') {
         requests.push(axios.get(`${API}/trips/${tripId}/cruise-info`));
+        requests.push(axios.get(`${API}/trips/${tripId}/details`));
       }
 
       // Note per tutti i ruoli (clienti vedono le proprie, admin/agent tutte)
@@ -114,6 +115,47 @@ const TripView = () => {
       let responseIndex = 2;
       if (user.role !== 'client') {
         setCruiseInfo(responses[responseIndex].data);
+        responseIndex++;
+        
+        // Set trip details and populate form data
+        const tripDetailsData = responses[responseIndex].data;
+        setTripDetails(tripDetailsData);
+        
+        // Populate form data based on trip type
+        if (tripDetailsData.cruise_details) {
+          setCruiseDetailsForm({
+            ship_name: tripDetailsData.cruise_details.ship_name || '',
+            boarding_port: tripDetailsData.cruise_details.boarding_port || '',
+            cabin_number: tripDetailsData.cruise_details.cabin_number || '',
+            package_type: tripDetailsData.cruise_details.package_type || '',
+            insurance_type: tripDetailsData.cruise_details.insurance_type || '',
+            restaurant: tripDetailsData.cruise_details.restaurant || '',
+            dinner_time: tripDetailsData.cruise_details.dinner_time || ''
+          });
+        }
+        
+        if (tripDetailsData.resort_details) {
+          setResortDetailsForm({
+            resort_name: tripDetailsData.resort_details.resort_name || '',
+            room_type: tripDetailsData.resort_details.room_type || '',
+            meal_plan: tripDetailsData.resort_details.meal_plan || '',
+            package_formula: tripDetailsData.resort_details.package_formula || '',
+            insurance_type: tripDetailsData.resort_details.insurance_type || ''
+          });
+        }
+        
+        if (tripDetailsData.tour_details) {
+          setTourDetailsForm({
+            general_info: tripDetailsData.tour_details.general_info || ''
+          });
+        }
+        
+        if (tripDetailsData.custom_details) {
+          setCustomDetailsForm({
+            custom_details: tripDetailsData.custom_details.custom_details || ''
+          });
+        }
+        
         responseIndex++;
       }
       
