@@ -33,9 +33,15 @@ const FinancialReports = () => {
   const [agents, setAgents] = useState([]);
 
   useEffect(() => {
-    if (user.role === 'admin') {
+    if (user?.role === 'admin') {
       fetchAgents();
     }
+    // Always fetch financial reports on mount
+    fetchFinancialReports();
+  }, []); // Empty dependency array for mount-only effect
+
+  useEffect(() => {
+    // Fetch when filters change (excluding initial mount)
     fetchFinancialReports();
   }, [selectedYear, selectedMonth, selectedAgent]);
 
