@@ -891,10 +891,14 @@ const TripView = () => {
                             <Textarea 
                               placeholder="Inserisci tutte le informazioni generali del tour: guida, trasporti, hotel, pasti inclusi, punti di interesse, documenti necessari, etc."
                               rows={6}
+                              value={tourDetailsForm.general_info}
+                              onChange={(e) => setTourDetailsForm({...tourDetailsForm, general_info: e.target.value})}
                             />
                           </div>
                         </div>
-                        <Button className="mt-4">Salva Informazioni Tour</Button>
+                        <Button className="mt-4" onClick={handleSaveTourDetails}>
+                          Salva Informazioni Tour
+                        </Button>
                       </div>
                     )}
 
