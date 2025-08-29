@@ -2167,6 +2167,38 @@ class TravelAgencyAPITester:
             'success': True
         }
 
+    def run_trip_details_test(self):
+        """Run only the specific trip details endpoints test"""
+        print("🚀 Starting TRIP DETAILS ENDPOINTS Test...")
+        print(f"🌐 Base URL: {self.base_url}")
+        print(f"🔗 API URL: {self.api_url}")
+        print("🎯 FOCUS: Testing nuovi endpoint per i dettagli viaggi")
+        print("="*80)
+        
+        # Test authentication first
+        if not self.test_authentication():
+            print("❌ Authentication failed - stopping tests")
+            return False
+        
+        # Run the specific test for trip details endpoints
+        result = self.test_trip_details_endpoints()
+        
+        # Print final results
+        print("\n" + "="*80)
+        print("🏁 TRIP DETAILS ENDPOINTS TEST COMPLETED")
+        print("="*80)
+        print(f"📊 Tests Run: {self.tests_run}")
+        print(f"✅ Tests Passed: {self.tests_passed}")
+        print(f"❌ Tests Failed: {self.tests_run - self.tests_passed}")
+        print(f"📈 Success Rate: {(self.tests_passed/self.tests_run*100):.1f}%")
+        
+        if result:
+            print("🎉 TRIP DETAILS ENDPOINTS TEST COMPLETED!")
+        else:
+            print("⚠️  Trip details endpoints test failed - check logs above")
+        
+        return result
+
     def run_review_request_test(self):
         """Run only the specific review request test for TripView tabs"""
         print("🚀 Starting REVIEW REQUEST Test - TripView Tabs...")
