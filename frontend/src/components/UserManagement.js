@@ -40,6 +40,7 @@ const UserManagement = () => {
     password: '',
     first_name: '',
     last_name: '',
+    phone: '',
     role: 'client'
   });
 
