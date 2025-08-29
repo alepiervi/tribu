@@ -527,7 +527,7 @@ test_plan:
     - "TripView tabs testing cruise trip created successfully"
   stuck_tasks: []
   test_all: false
-  test_priority: "frontend_tripview_integration_then_full_tabs_test"
+  test_priority: "frontend_tripview_integration_completed_successfully"
 
 agent_communication:
     -agent: "main"
