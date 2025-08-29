@@ -106,12 +106,59 @@ const FinancialReports = () => {
     return reportData?.can_export_excel || false;
   };
 
-  const handleExportExcel = () => {
-    if (!canExportExcel()) {
-      toast.error('Export Excel non autorizzato per il tuo ruolo');
-      return;
+  const handleExportExcel = async () => {
+    try {
+      let exportParams = {};
+      
+      // Build export parameters based on type
+      if (exportType === 'year') {
+        exportParams = { year: exportYear };
+      } else if (exportType === 'month') {
+        exportParams = { year: exportYear, month: exportMonth };
+      } else if (exportType === 'all') {
+        exportParams = {}; // No filters for all years
+      }
+
+      // Add agent filter if selected
+      if (selectedAgent && selectedAgent !== 'all') {
+        exportParams.agent_id = selectedAgent;
+      }
+
+      // Call backend export endpoint
+      const response = await axios.get(`${API}/reports/financial/export`, { 
+        params: exportParams,
+        responseType: 'blob' // Important for file download
+      });
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Generate filename based on export type
+      let filename = 'report_finanziario';
+      if (exportType === 'year') {
+        filename += `_${exportYear}`;
+      } else if (exportType === 'month') {
+        filename += `_${exportYear}_${exportMonth}`;
+      } else if (exportType === 'all') {
+        filename += '_tutti_anni';
+      }
+      filename += '.xlsx';
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success('Report Excel scaricato con successo!');
+      setShowExportDialog(false);
+      
+    } catch (error) {
+      console.error('Error exporting Excel:', error);
+      toast.error('Errore nell\'esportazione del report Excel');
     }
-    toast.info('Funzione export Excel in sviluppo');
   };
 
   return (
