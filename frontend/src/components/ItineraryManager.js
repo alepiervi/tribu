@@ -66,7 +66,20 @@ const ItineraryManager = () => {
 
   const handleCreateItinerary = async () => {
     try {
-      await axios.post(`${API}/itineraries`, { ...newItinerary, trip_id: tripId });
+      // Validate required fields
+      if (!newItinerary.day_number || !newItinerary.date || !newItinerary.title) {
+        toast.error('Compila tutti i campi obbligatori');
+        return;
+      }
+
+      const itineraryData = {
+        ...newItinerary,
+        trip_id: tripId,
+        day_number: parseInt(newItinerary.day_number),
+        date: new Date(newItinerary.date).toISOString()
+      };
+
+      await axios.post(`${API}/itineraries`, itineraryData);
       toast.success('Giornata aggiunta con successo!');
       setShowCreateDialog(false);
       setNewItinerary({
@@ -79,7 +92,8 @@ const ItineraryManager = () => {
       fetchData();
     } catch (error) {
       console.error('Error creating itinerary:', error);
-      toast.error('Errore nella creazione della giornata');
+      const errorMessage = error.response?.data?.detail || 'Errore nella creazione della giornata';
+      toast.error(errorMessage);
     }
   };
 
