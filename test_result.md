@@ -520,10 +520,11 @@ metadata:
 
 test_plan:
   current_focus:
+    - "TripView Dettagli Viaggio tab integrazione"
     - "TripView tabs testing cruise trip created successfully"
   stuck_tasks: []
   test_all: false
-  test_priority: "frontend_tabs_testing_ready"
+  test_priority: "frontend_tripview_integration_then_full_tabs_test"
 
 agent_communication:
     -agent: "main"
