@@ -182,7 +182,7 @@ const FinancialReports = () => {
                     <SelectValue placeholder="Tutto l'anno" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tutto l'anno</SelectItem>
+                    <SelectItem value="all">Tutto l'anno</SelectItem>
                     {getMonths().map(month => (
                       <SelectItem key={month.value} value={month.value.toString()}>
                         {month.label}
