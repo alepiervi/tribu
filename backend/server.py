@@ -1376,6 +1376,181 @@ async def get_financial_reports(
         "can_export_excel": current_user["role"] == "admin"  # Only admin can export to Excel
     }
 
+# Excel Export endpoint
+@api_router.get("/reports/financial/export")
+async def export_financial_report(
+    year: int = None,
+    month: int = None,
+    agent_id: str = None,
+    current_user: dict = Depends(get_current_user)
+):
+    from fastapi.responses import StreamingResponse
+    import io
+    
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can export Excel reports")
+    
+    # Reuse the same logic from get_financial_reports
+    # Build date query
+    date_query = {}
+    if year:
+        start_date = datetime(year, 1, 1, tzinfo=timezone.utc)
+        if month:
+            # Specific month
+            if month == 12:
+                end_date = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+            else:
+                end_date = datetime(year, month + 1, 1, tzinfo=timezone.utc)
+            start_date = datetime(year, month, 1, tzinfo=timezone.utc)
+        else:
+            # Entire year
+            end_date = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+        
+        date_query = {
+            "$gte": start_date.isoformat(),
+            "$lt": end_date.isoformat()
+        }
+    
+    # Build main query
+    query = {"status": "confirmed"}
+    if date_query:
+        query["practice_confirm_date"] = date_query
+    
+    if agent_id:
+        agent_trips = await db.trips.find({"agent_id": agent_id}).to_list(1000)
+        trip_ids = [trip["id"] for trip in agent_trips]
+        query["trip_id"] = {"$in": trip_ids}
+    
+    # Get confirmed trips
+    confirmed_trips = await db.trip_admin.find(query).to_list(1000)
+    
+    # Enrich trips with client and agent information (same logic as reports)
+    enriched_trips = []
+    for trip_admin in confirmed_trips:
+        trip = await db.trips.find_one({"id": trip_admin.get("trip_id")})
+        if trip:
+            client = await db.users.find_one({"id": trip.get("client_id")})
+            agent = await db.users.find_one({"id": trip.get("agent_id")})
+            
+            enriched_trip = {
+                "practice_number": trip_admin.get("practice_number", ""),
+                "booking_number": trip_admin.get("booking_number", ""),
+                "client_name": f"{client.get('first_name', 'Unknown')} {client.get('last_name', 'Client')}" if client else "Unknown Client",
+                "practice_confirm_date": trip_admin.get("practice_confirm_date", ""),
+                "client_departure_date": trip_admin.get("client_departure_date", ""),
+                "gross_amount": trip_admin.get("gross_amount", 0),
+                "supplier_commission": trip_admin.get("supplier_commission", 0),
+                "discount": trip_admin.get("discount", 0),
+                "agent_commission": trip_admin.get("agent_commission", 0)
+            }
+            enriched_trips.append(enriched_trip)
+    
+    # Create Excel file using openpyxl
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment
+        from openpyxl.utils import get_column_letter
+    except ImportError:
+        raise HTTPException(status_code=500, detail="Excel export library not available")
+    
+    # Create workbook and worksheet
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Report Finanziario"
+    
+    # Header row
+    headers = [
+        "Numero Pratica",
+        "Numero Prenotazione", 
+        "Nome Cliente",
+        "Data Conferma Pratica",
+        "Data Partenza",
+        "Fatturato Lordo (€)",
+        "Commissione Fornitore (€)",
+        "Sconti Applicati (€)",
+        "Commissione Agente (€)"
+    ]
+    
+    # Style header
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center")
+    
+    # Data rows
+    for row_idx, trip in enumerate(enriched_trips, 2):
+        # Format dates
+        confirm_date = ""
+        departure_date = ""
+        
+        if trip["practice_confirm_date"]:
+            try:
+                confirm_date = datetime.fromisoformat(trip["practice_confirm_date"].replace('Z', '+00:00')).strftime('%d/%m/%Y')
+            except:
+                confirm_date = trip["practice_confirm_date"]
+        
+        if trip["client_departure_date"]:
+            try:
+                departure_date = datetime.fromisoformat(trip["client_departure_date"].replace('Z', '+00:00')).strftime('%d/%m/%Y')
+            except:
+                departure_date = trip["client_departure_date"]
+        
+        row_data = [
+            trip["practice_number"],
+            trip["booking_number"],
+            trip["client_name"],
+            confirm_date,
+            departure_date,
+            trip["gross_amount"],
+            trip["supplier_commission"],
+            trip["discount"],
+            trip["agent_commission"]
+        ]
+        
+        for col, value in enumerate(row_data, 1):
+            ws.cell(row=row_idx, column=col, value=value)
+    
+    # Auto-adjust column widths
+    for col in range(1, len(headers) + 1):
+        max_length = 0
+        column = get_column_letter(col)
+        
+        for row in ws[column]:
+            try:
+                if len(str(row.value)) > max_length:
+                    max_length = len(str(row.value))
+            except:
+                pass
+        
+        adjusted_width = min(max_length + 2, 50)
+        ws.column_dimensions[column].width = adjusted_width
+    
+    # Save to BytesIO
+    excel_buffer = io.BytesIO()
+    wb.save(excel_buffer)
+    excel_buffer.seek(0)
+    
+    # Create filename
+    filename = "report_finanziario"
+    if year and month:
+        filename += f"_{year}_{month:02d}"
+    elif year:
+        filename += f"_{year}"
+    else:
+        filename += "_tutti_anni"
+    filename += ".xlsx"
+    
+    # Return file
+    return StreamingResponse(
+        io.BytesIO(excel_buffer.getvalue()),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
 # Financial Sheets Management
 @api_router.post("/financial-sheets")
 async def create_financial_sheet(
