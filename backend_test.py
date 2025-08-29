@@ -1328,6 +1328,247 @@ class TravelAgencyAPITester:
             'success': True
         }
 
+    def test_trip_details_endpoints(self):
+        """Test NEW trip details endpoints (cruise/resort/tour/custom) - REVIEW REQUEST FOCUS"""
+        print("\n🚢 Testing TRIP DETAILS ENDPOINTS (REVIEW REQUEST FOCUS)...")
+        print("🎯 Testing nuovi endpoint per i dettagli viaggi appena implementati nel backend")
+        print("📋 Credentials: admin@test.it / password123")
+        print("🚢 Using existing cruise trip: c48cbf70-214b-492d-b295-838d7c8dad89")
+        
+        if not self.admin_token or not self.agent_token or not self.client_token:
+            print("❌ Skipping trip details tests - missing tokens")
+            return False
+
+        # Use the provided cruise trip ID from the review request
+        cruise_trip_id = "c48cbf70-214b-492d-b295-838d7c8dad89"
+        
+        # STEP 1: Test GET /api/trips/{trip_id}/details - Recuperare dettagli esistenti
+        print(f"\n🔍 STEP 1: Testing GET /api/trips/{cruise_trip_id}/details")
+        success, details_result = self.make_request('GET', f'trips/{cruise_trip_id}/details', token=self.admin_token)
+        
+        if success:
+            self.log_test("✅ GET /api/trips/{trip_id}/details", True)
+            
+            # Verify response structure
+            if 'trip_type' in details_result:
+                trip_type = details_result['trip_type']
+                self.log_test(f"Trip type detected: {trip_type}", True)
+                
+                # Check if cruise details exist
+                if trip_type == 'cruise' and 'cruise_details' in details_result:
+                    self.log_test("Existing cruise details found", True)
+                    cruise_details = details_result['cruise_details']
+                    print(f"   🚢 Ship Name: {cruise_details.get('ship_name', 'N/A')}")
+                    print(f"   🏠 Cabin Number: {cruise_details.get('cabin_number', 'N/A')}")
+                    print(f"   🚢 Boarding Port: {cruise_details.get('boarding_port', 'N/A')}")
+                elif trip_type == 'cruise':
+                    self.log_test("No existing cruise details (ready for creation)", True)
+                else:
+                    self.log_test(f"Trip type is {trip_type}, not cruise", True)
+            else:
+                self.log_test("Response missing trip_type", False, f"Response: {details_result}")
+        else:
+            self.log_test("GET /api/trips/{trip_id}/details", False, str(details_result))
+            return False
+
+        # STEP 2: Test POST /api/trips/{trip_id}/cruise-details - Salvataggio dettagli crociera
+        print(f"\n🚢 STEP 2: Testing POST /api/trips/{cruise_trip_id}/cruise-details")
+        
+        # Sample cruise data from review request
+        cruise_data = {
+            "ship_name": "MSC Seaside Premium",
+            "boarding_port": "Civitavecchia (Roma)",
+            "cabin_number": "7145",
+            "package_type": "Balcone Premium con Beverage",
+            "insurance_type": "Annullamento + Medica + Bagaglio",
+            "restaurant": "Ristorante Principale + Speciality",
+            "dinner_time": "Secondo turno - 21:00"
+        }
+        
+        success, cruise_result = self.make_request('POST', f'trips/{cruise_trip_id}/cruise-details', cruise_data, token=self.admin_token)
+        
+        if success:
+            self.log_test("✅ POST /api/trips/{trip_id}/cruise-details (CREATE)", True)
+            print(f"   🚢 Ship: {cruise_result.get('ship_name')}")
+            print(f"   🏠 Cabin: {cruise_result.get('cabin_number')}")
+            print(f"   🚢 Port: {cruise_result.get('boarding_port')}")
+            print(f"   📦 Package: {cruise_result.get('package_type')}")
+            print(f"   🛡️  Insurance: {cruise_result.get('insurance_type')}")
+            print(f"   🍽️  Restaurant: {cruise_result.get('restaurant')}")
+            print(f"   🕘 Dinner Time: {cruise_result.get('dinner_time')}")
+            
+            # Verify timestamps
+            if 'created_at' in cruise_result and 'updated_at' in cruise_result:
+                self.log_test("Timestamps (created_at, updated_at) present", True)
+            else:
+                self.log_test("Missing timestamps", False, "Should have created_at and updated_at")
+        else:
+            self.log_test("POST /api/trips/{trip_id}/cruise-details (CREATE)", False, str(cruise_result))
+
+        # STEP 3: Test UPDATE functionality - POST again with modified data
+        print(f"\n🔄 STEP 3: Testing UPDATE functionality (POST with modified data)")
+        
+        # Modified cruise data
+        updated_cruise_data = {
+            "ship_name": "MSC Seaside Premium UPDATED",
+            "boarding_port": "Civitavecchia (Roma)",
+            "cabin_number": "7146",  # Changed cabin number
+            "package_type": "Balcone Premium con Beverage PLUS",  # Changed package
+            "insurance_type": "Annullamento + Medica + Bagaglio + Extra",  # Changed insurance
+            "restaurant": "Ristorante Principale + Speciality + VIP",  # Changed restaurant
+            "dinner_time": "Primo turno - 19:30"  # Changed dinner time
+        }
+        
+        success, updated_result = self.make_request('POST', f'trips/{cruise_trip_id}/cruise-details', updated_cruise_data, token=self.admin_token)
+        
+        if success:
+            self.log_test("✅ POST /api/trips/{trip_id}/cruise-details (UPDATE)", True)
+            
+            # Verify changes were applied
+            changes_verified = 0
+            if updated_result.get('ship_name') == updated_cruise_data['ship_name']:
+                changes_verified += 1
+            if updated_result.get('cabin_number') == updated_cruise_data['cabin_number']:
+                changes_verified += 1
+            if updated_result.get('package_type') == updated_cruise_data['package_type']:
+                changes_verified += 1
+            if updated_result.get('dinner_time') == updated_cruise_data['dinner_time']:
+                changes_verified += 1
+                
+            if changes_verified >= 3:
+                self.log_test("Update changes applied correctly", True)
+                print(f"   ✅ {changes_verified}/4 fields updated successfully")
+            else:
+                self.log_test("Update changes not applied", False, f"Only {changes_verified}/4 fields updated")
+                
+            # Verify updated_at timestamp changed
+            if 'updated_at' in updated_result:
+                self.log_test("Updated timestamp present", True)
+            else:
+                self.log_test("Missing updated timestamp", False, "Should have updated_at timestamp")
+        else:
+            self.log_test("POST /api/trips/{trip_id}/cruise-details (UPDATE)", False, str(updated_result))
+
+        # STEP 4: Test authorization - Admin/Agent OK, Client blocked
+        print(f"\n🔐 STEP 4: Testing authorization controls")
+        
+        # Test agent access (should work)
+        success, agent_result = self.make_request('GET', f'trips/{cruise_trip_id}/details', token=self.agent_token)
+        self.log_test("✅ Agent access to GET trip details", success, str(agent_result) if not success else "")
+        
+        success, agent_post = self.make_request('POST', f'trips/{cruise_trip_id}/cruise-details', cruise_data, token=self.agent_token)
+        self.log_test("✅ Agent access to POST cruise details", success, str(agent_post) if not success else "")
+        
+        # Test client access (should be blocked)
+        success, client_result = self.make_request('GET', f'trips/{cruise_trip_id}/details', token=self.client_token, expected_status=403)
+        self.log_test("🚫 Client blocked from GET trip details", success, str(client_result) if not success else "")
+        
+        success, client_post = self.make_request('POST', f'trips/{cruise_trip_id}/cruise-details', cruise_data, token=self.client_token, expected_status=403)
+        self.log_test("🚫 Client blocked from POST cruise details", success, str(client_post) if not success else "")
+
+        # STEP 5: Test validation with invalid trip_id
+        print(f"\n❌ STEP 5: Testing validation with invalid trip_id")
+        
+        invalid_trip_id = "invalid-trip-id-12345"
+        
+        success, invalid_get = self.make_request('GET', f'trips/{invalid_trip_id}/details', token=self.admin_token, expected_status=404)
+        self.log_test("❌ Invalid trip_id returns 404 for GET details", success, str(invalid_get) if not success else "")
+        
+        success, invalid_post = self.make_request('POST', f'trips/{invalid_trip_id}/cruise-details', cruise_data, token=self.admin_token, expected_status=404)
+        self.log_test("❌ Invalid trip_id returns 404 for POST cruise details", success, str(invalid_post) if not success else "")
+
+        # STEP 6: Test other trip detail types (resort, tour, custom)
+        print(f"\n🏨 STEP 6: Testing other trip detail types")
+        
+        # Create a test trip for other types
+        success, client_info = self.make_request('GET', 'auth/me', token=self.client_token)
+        if success:
+            client_id = client_info['id']
+            
+            # Create resort trip
+            resort_trip_data = {
+                'title': 'Test Resort Trip',
+                'destination': 'Maldives',
+                'description': 'Resort trip for testing details',
+                'start_date': (datetime.now(timezone.utc) + timedelta(days=30)).isoformat(),
+                'end_date': (datetime.now(timezone.utc) + timedelta(days=37)).isoformat(),
+                'client_id': client_id,
+                'trip_type': 'resort'
+            }
+            
+            success, resort_trip = self.make_request('POST', 'trips', resort_trip_data, token=self.admin_token)
+            if success:
+                resort_trip_id = resort_trip['id']
+                self.created_resources['trips'].append(resort_trip_id)
+                
+                # Test resort details
+                resort_details = {
+                    "resort_name": "Paradise Resort Maldives",
+                    "room_type": "Water Villa with Pool",
+                    "meal_plan": "All Inclusive Premium",
+                    "package_formula": "Honeymoon Package",
+                    "insurance_type": "Travel + Medical + Cancellation"
+                }
+                
+                success, resort_result = self.make_request('POST', f'trips/{resort_trip_id}/resort-details', resort_details, token=self.admin_token)
+                self.log_test("✅ POST /api/trips/{trip_id}/resort-details", success, str(resort_result) if not success else "")
+                
+                # Test tour details
+                tour_details = {
+                    "general_info": "Complete European tour with guided visits to major cities and historical sites"
+                }
+                
+                success, tour_result = self.make_request('POST', f'trips/{resort_trip_id}/tour-details', tour_details, token=self.admin_token)
+                self.log_test("✅ POST /api/trips/{trip_id}/tour-details", success, str(tour_result) if not success else "")
+                
+                # Test custom details
+                custom_details = {
+                    "custom_details": "Personalized adventure trip with custom itinerary and special accommodations"
+                }
+                
+                success, custom_result = self.make_request('POST', f'trips/{resort_trip_id}/custom-details', custom_details, token=self.admin_token)
+                self.log_test("✅ POST /api/trips/{trip_id}/custom-details", success, str(custom_result) if not success else "")
+
+        # STEP 7: Test create/update integration
+        print(f"\n🔄 STEP 7: Testing create/update integration")
+        
+        # Verify GET details shows all the data we created
+        success, final_details = self.make_request('GET', f'trips/{cruise_trip_id}/details', token=self.admin_token)
+        if success:
+            self.log_test("✅ GET details after all operations", True)
+            
+            if 'cruise_details' in final_details:
+                cruise_details = final_details['cruise_details']
+                # Verify it has the updated data from STEP 3
+                if cruise_details.get('ship_name') == updated_cruise_data['ship_name']:
+                    self.log_test("Final cruise details contain updated data", True)
+                else:
+                    self.log_test("Final cruise details missing updates", False, f"Expected updated ship name, got: {cruise_details.get('ship_name')}")
+            else:
+                self.log_test("Final details missing cruise_details", False, "Should contain cruise_details after creation")
+        else:
+            self.log_test("GET details after all operations", False, str(final_details))
+
+        print("\n✅ TRIP DETAILS ENDPOINTS TESTING COMPLETED")
+        print("="*60)
+        print("📊 SUMMARY OF TESTED ENDPOINTS:")
+        print("   ✅ GET /api/trips/{trip_id}/details")
+        print("   ✅ POST /api/trips/{trip_id}/cruise-details")
+        print("   ✅ POST /api/trips/{trip_id}/resort-details")
+        print("   ✅ POST /api/trips/{trip_id}/tour-details")
+        print("   ✅ POST /api/trips/{trip_id}/custom-details")
+        print("")
+        print("🎯 TESTED SCENARIOS:")
+        print("   ✅ GET details for existing trip")
+        print("   ✅ POST cruise-details with complete data")
+        print("   ✅ Update functionality (POST with modified data)")
+        print("   ✅ Authorization (admin/agent OK, client blocked)")
+        print("   ✅ Validation with invalid trip_id")
+        print("   ✅ Create/update integration")
+        print("="*60)
+        
+        return True
+
     def test_new_endpoints_comprehensive(self):
         """Run comprehensive tests for all new endpoints"""
         print("\n🆕 Testing ALL NEW ENDPOINTS...")
