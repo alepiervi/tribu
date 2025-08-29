@@ -66,28 +66,28 @@ const TripView = () => {
         axios.get(`${API}/trips/${tripId}/itineraries`),
       ];
 
-      // Solo per crociere
+      // Cruise info per admin/agent
       if (user.role !== 'client') {
         requests.push(axios.get(`${API}/trips/${tripId}/cruise-info`));
       }
 
-      // Note solo per clienti
-      if (user.role === 'client') {
-        requests.push(axios.get(`${API}/trips/${tripId}/notes`));
-      }
+      // Note per tutti i ruoli (clienti vedono le proprie, admin/agent tutte)
+      requests.push(axios.get(`${API}/trips/${tripId}/notes`));
 
       const responses = await Promise.all(requests);
       
       setTripData(responses[0].data);
       setItineraries(responses[1].data);
       
-      if (user.role !== 'client' && responses[2]) {
-        setCruiseInfo(responses[2].data);
+      let responseIndex = 2;
+      if (user.role !== 'client') {
+        setCruiseInfo(responses[responseIndex].data);
+        responseIndex++;
       }
       
-      if (user.role === 'client' && responses[responses.length - 1]) {
-        setNotes(responses[responses.length - 1].data);
-      }
+      // Note sono sempre l'ultimo elemento
+      setNotes(responses[responseIndex].data || []);
+      
     } catch (error) {
       console.error('Error fetching trip data:', error);
       toast.error('Errore nel caricamento del viaggio');
