@@ -157,6 +157,26 @@ const TripView = () => {
     }
   };
 
+  const handleStatusChange = async () => {
+    try {
+      await axios.put(`${API}/trips/${tripId}/status`, { status: newStatus });
+      toast.success(`Stato viaggio aggiornato a: ${newStatus}`);
+      
+      setShowStatusDialog(false);
+      setNewStatus('');
+      fetchTripData(); // Reload trip data to show new status
+    } catch (error) {
+      console.error('Error updating trip status:', error);
+      const errorMessage = error.response?.data?.detail || 'Errore nell\'aggiornamento dello stato';
+      toast.error(errorMessage);
+    }
+  };
+
+  const openStatusDialog = () => {
+    setNewStatus(tripData.trip.status);
+    setShowStatusDialog(true);
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'active': return 'bg-green-100 text-green-800';
