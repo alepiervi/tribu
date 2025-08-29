@@ -25,10 +25,10 @@ const API = `${BACKEND_URL}/api`;
 
 const FinancialReports = () => {
   const { user } = useAuth();
-  const [analytics, setAnalytics] = useState(null);
-  const [yearlyData, setYearlyData] = useState(null);
+  const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState('');
   const [selectedAgent, setSelectedAgent] = useState(user.role === 'agent' ? user.id : '');
   const [agents, setAgents] = useState([]);
 
@@ -36,9 +36,8 @@ const FinancialReports = () => {
     if (user.role === 'admin') {
       fetchAgents();
     }
-    fetchAnalytics();
-    fetchYearlyData();
-  }, [selectedYear, selectedAgent]);
+    fetchFinancialReports();
+  }, [selectedYear, selectedMonth, selectedAgent]);
 
   const fetchAgents = async () => {
     try {
@@ -49,30 +48,22 @@ const FinancialReports = () => {
     }
   };
 
-  const fetchAnalytics = async () => {
+  const fetchFinancialReports = async () => {
     setLoading(true);
     try {
       const params = {
         year: selectedYear,
+        ...(selectedMonth && { month: selectedMonth }),
         ...(selectedAgent && { agent_id: selectedAgent })
       };
       
-      const response = await axios.get(`${API}/analytics/agent-commissions`, { params });
-      setAnalytics(response.data);
+      const response = await axios.get(`${API}/reports/financial`, { params });
+      setReportData(response.data);
     } catch (error) {
-      console.error('Error fetching analytics:', error);
-      toast.error('Errore nel caricamento dei report');
+      console.error('Error fetching financial reports:', error);
+      toast.error('Errore nel caricamento dei report finanziari');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchYearlyData = async () => {
-    try {
-      const response = await axios.get(`${API}/analytics/yearly-summary/${selectedYear}`);
-      setYearlyData(response.data);
-    } catch (error) {
-      console.error('Error fetching yearly data:', error);
     }
   };
 
@@ -93,30 +84,23 @@ const FinancialReports = () => {
     return Array.from({ length: 5 }, (_, i) => currentYear - i);
   };
 
-  const getMonthlyBreakdown = () => {
-    if (!analytics?.trips) return [];
-    
-    const months = Array.from({ length: 12 }, (_, i) => ({
-      month: i + 1,
-      name: new Date(selectedYear, i).toLocaleDateString('it-IT', { month: 'long' }),
-      revenue: 0,
-      commission: 0,
-      trips: 0
+  const getMonths = () => {
+    return Array.from({ length: 12 }, (_, i) => ({
+      value: i + 1,
+      label: new Date(2000, i).toLocaleDateString('it-IT', { month: 'long' })
     }));
+  };
 
-    analytics.trips.forEach(trip => {
-      if (trip.practice_confirm_date) {
-        const date = new Date(trip.practice_confirm_date);
-        if (date.getFullYear() === selectedYear) {
-          const month = date.getMonth();
-          months[month].revenue += trip.gross_amount || 0;
-          months[month].commission += trip.agent_commission || 0;
-          months[month].trips += 1;
-        }
-      }
-    });
+  const canExportExcel = () => {
+    return reportData?.can_export_excel || false;
+  };
 
-    return months;
+  const handleExportExcel = () => {
+    if (!canExportExcel()) {
+      toast.error('Export Excel non autorizzato per il tuo ruolo');
+      return;
+    }
+    toast.info('Funzione export Excel in sviluppo');
   };
 
   return (
@@ -135,10 +119,24 @@ const FinancialReports = () => {
               <h1 className="text-xl font-bold text-slate-800">Report Finanziari</h1>
             </div>
             
-            <Button variant="outline" size="sm" className="flex items-center gap-2">
-              <Download className="w-4 h-4" />
-              Esporta PDF
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="flex items-center gap-2">
+                <Download className="w-4 h-4" />
+                Esporta PDF
+              </Button>
+              
+              {canExportExcel() && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center gap-2"
+                  onClick={handleExportExcel}
+                >
+                  <Download className="w-4 h-4" />
+                  Esporta Excel
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -154,7 +152,7 @@ const FinancialReports = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="year">Anno</Label>
                 <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
@@ -165,6 +163,23 @@ const FinancialReports = () => {
                     {getCurrentYearRange().map(year => (
                       <SelectItem key={year} value={year.toString()}>
                         {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="month">Mese (opzionale)</Label>
+                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tutto l'anno" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Tutto l'anno</SelectItem>
+                    {getMonths().map(month => (
+                      <SelectItem key={month.value} value={month.value.toString()}>
+                        {month.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -191,7 +206,7 @@ const FinancialReports = () => {
               )}
 
               <div className="flex items-end">
-                <Button onClick={() => { fetchAnalytics(); fetchYearlyData(); }} disabled={loading}>
+                <Button onClick={fetchFinancialReports} disabled={loading}>
                   {loading ? 'Caricamento...' : 'Aggiorna Report'}
                 </Button>
               </div>
@@ -199,14 +214,14 @@ const FinancialReports = () => {
           </CardContent>
         </Card>
 
-        {analytics && (
+        {reportData && reportData.totals && (
           <>
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-green-100">
-                    Fatturato Totale
+                    Fatturato Lordo
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -214,10 +229,10 @@ const FinancialReports = () => {
                     <DollarSign className="h-8 w-8 text-green-200 mr-3" />
                     <div>
                       <div className="text-2xl font-bold">
-                        {formatCurrency(analytics.total_revenue)}
+                        {formatCurrency(reportData.totals.gross_revenue)}
                       </div>
                       <div className="text-green-100 text-sm">
-                        {analytics.year} - {analytics.total_confirmed_trips} viaggi
+                        {reportData.totals.total_trips} viaggi
                       </div>
                     </div>
                   </div>
@@ -227,7 +242,7 @@ const FinancialReports = () => {
               <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-blue-100">
-                    Commissioni Agente
+                    Commissioni Agenti
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -235,10 +250,10 @@ const FinancialReports = () => {
                     <TrendingUp className="h-8 w-8 text-blue-200 mr-3" />
                     <div>
                       <div className="text-2xl font-bold">
-                        {formatCurrency(analytics.total_agent_commission)}
+                        {formatCurrency(reportData.totals.agent_commissions)}
                       </div>
                       <div className="text-blue-100 text-sm">
-                        {formatPercentage(analytics.total_agent_commission, analytics.total_revenue)} del fatturato
+                        {formatPercentage(reportData.totals.agent_commissions, reportData.totals.gross_revenue)} del fatturato
                       </div>
                     </div>
                   </div>
@@ -248,7 +263,7 @@ const FinancialReports = () => {
               <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-purple-100">
-                    Commissioni Fornitore
+                    Commissioni Fornitori
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -256,10 +271,10 @@ const FinancialReports = () => {
                     <PieChart className="h-8 w-8 text-purple-200 mr-3" />
                     <div>
                       <div className="text-2xl font-bold">
-                        {formatCurrency(analytics.total_supplier_commission)}
+                        {formatCurrency(reportData.totals.supplier_commissions)}
                       </div>
                       <div className="text-purple-100 text-sm">
-                        {formatPercentage(analytics.total_supplier_commission, analytics.total_revenue)} del fatturato
+                        {formatPercentage(reportData.totals.supplier_commissions, reportData.totals.gross_revenue)} del fatturato
                       </div>
                     </div>
                   </div>
@@ -269,7 +284,7 @@ const FinancialReports = () => {
               <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-orange-100">
-                    Margine Lordo
+                    Sconti Totali
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -277,10 +292,10 @@ const FinancialReports = () => {
                     <BarChart3 className="h-8 w-8 text-orange-200 mr-3" />
                     <div>
                       <div className="text-2xl font-bold">
-                        {formatCurrency(analytics.total_gross_commission)}
+                        {formatCurrency(reportData.totals.total_discounts)}
                       </div>
                       <div className="text-orange-100 text-sm">
-                        {formatPercentage(analytics.total_gross_commission, analytics.total_revenue)} del fatturato
+                        {reportData.totals.client_departures} partenze
                       </div>
                     </div>
                   </div>
@@ -288,57 +303,66 @@ const FinancialReports = () => {
               </Card>
             </div>
 
-            {/* Monthly Breakdown */}
-            <Card className="mb-8">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
-                  Andamento Mensile {selectedYear}
-                </CardTitle>
-                <CardDescription>
-                  Fatturato e commissioni mese per mese
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {getMonthlyBreakdown().map((monthData) => (
-                    <div key={monthData.month} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
-                      <div className="flex items-center gap-4">
-                        <div className="w-16 text-sm font-medium text-slate-600">
-                          {monthData.name}
-                        </div>
-                        <Badge variant="outline">
-                          {monthData.trips} viaggi
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex items-center gap-8 text-sm">
-                        <div className="text-right">
-                          <div className="font-semibold text-slate-800">
-                            {formatCurrency(monthData.revenue)}
+            {/* Monthly Breakdown - only show if yearly data requested */}
+            {reportData.monthly_breakdown && reportData.monthly_breakdown.length > 0 && (
+              <Card className="mb-8">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5" />
+                    Andamento Mensile {selectedYear}
+                  </CardTitle>
+                  <CardDescription>
+                    Fatturato e commissioni mese per mese
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {reportData.monthly_breakdown.map((monthData) => (
+                      <div key={monthData.month} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
+                        <div className="flex items-center gap-4">
+                          <div className="w-20 text-sm font-medium text-slate-600">
+                            {monthData.month_name}
                           </div>
-                          <div className="text-slate-500">Fatturato</div>
+                          <Badge variant="outline">
+                            {monthData.total_trips} viaggi
+                          </Badge>
                         </div>
                         
-                        <div className="text-right">
-                          <div className="font-semibold text-green-600">
-                            {formatCurrency(monthData.commission)}
+                        <div className="flex items-center gap-8 text-sm">
+                          <div className="text-right">
+                            <div className="font-semibold text-slate-800">
+                              {formatCurrency(monthData.gross_revenue)}
+                            </div>
+                            <div className="text-slate-500">Fatturato</div>
                           </div>
-                          <div className="text-slate-500">Commissioni</div>
-                        </div>
-                        
-                        <div className="text-right">
-                          <div className="font-semibold text-blue-600">
-                            {formatPercentage(monthData.commission, monthData.revenue)}
+                          
+                          <div className="text-right">
+                            <div className="font-semibold text-green-600">
+                              {formatCurrency(monthData.agent_commissions)}
+                            </div>
+                            <div className="text-slate-500">Comm. Agenti</div>
                           </div>
-                          <div className="text-slate-500">Margine</div>
+                          
+                          <div className="text-right">
+                            <div className="font-semibold text-purple-600">
+                              {formatCurrency(monthData.supplier_commissions)}
+                            </div>
+                            <div className="text-slate-500">Comm. Fornitori</div>
+                          </div>
+
+                          <div className="text-right">
+                            <div className="font-semibold text-orange-600">
+                              {formatCurrency(monthData.total_discounts)}
+                            </div>
+                            <div className="text-slate-500">Sconti</div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Trip Details */}
             <Card>
@@ -350,7 +374,7 @@ const FinancialReports = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {analytics.trips && analytics.trips.length > 0 ? analytics.trips.map((trip) => (
+                  {reportData.detailed_trips && reportData.detailed_trips.length > 0 ? reportData.detailed_trips.map((trip) => (
                     <div key={trip.id} className="border border-slate-200 rounded-lg p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
@@ -365,7 +389,7 @@ const FinancialReports = () => {
                           </p>
                         </div>
                         
-                        <div className="grid grid-cols-4 gap-4 text-sm">
+                        <div className="grid grid-cols-5 gap-4 text-sm">
                           <div className="text-right">
                             <div className="font-semibold">{formatCurrency(trip.gross_amount)}</div>
                             <div className="text-slate-500">Lordo</div>
@@ -382,6 +406,10 @@ const FinancialReports = () => {
                             <div className="font-semibold text-purple-600">{formatCurrency(trip.supplier_commission)}</div>
                             <div className="text-slate-500">Fornitore</div>
                           </div>
+                          <div className="text-right">
+                            <div className="font-semibold text-orange-600">{formatCurrency(trip.discount)}</div>
+                            <div className="text-slate-500">Sconto</div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -397,7 +425,7 @@ const FinancialReports = () => {
           </>
         )}
 
-        {!analytics && !loading && (
+        {!reportData && !loading && (
           <Card>
             <CardContent className="text-center py-16">
               <BarChart3 className="mx-auto h-16 w-16 text-slate-400 mb-6" />
