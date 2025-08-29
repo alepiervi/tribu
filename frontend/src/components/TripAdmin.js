@@ -85,7 +85,26 @@ const TripAdmin = () => {
 
   const handleCreateAdmin = async () => {
     try {
-      await axios.post(`${API}/trips/${tripId}/admin`, newAdminData);
+      // Validate required fields
+      if (!newAdminData.practice_number || !newAdminData.booking_number || 
+          !newAdminData.gross_amount || !newAdminData.net_amount ||
+          !newAdminData.practice_confirm_date || !newAdminData.client_departure_date) {
+        toast.error('Compila tutti i campi obbligatori');
+        return;
+      }
+
+      const adminData = {
+        ...newAdminData,
+        trip_id: tripId,
+        gross_amount: parseFloat(newAdminData.gross_amount),
+        net_amount: parseFloat(newAdminData.net_amount),
+        discount: parseFloat(newAdminData.discount || 0),
+        confirmation_deposit: parseFloat(newAdminData.confirmation_deposit || 0),
+        practice_confirm_date: new Date(newAdminData.practice_confirm_date).toISOString(),
+        client_departure_date: new Date(newAdminData.client_departure_date).toISOString()
+      };
+
+      await axios.post(`${API}/trips/${tripId}/admin`, adminData);
       toast.success('Dati amministrativi creati con successo!');
       setShowCreateAdminDialog(false);
       setNewAdminData({
@@ -101,7 +120,8 @@ const TripAdmin = () => {
       fetchTripAdminData();
     } catch (error) {
       console.error('Error creating admin data:', error);
-      toast.error('Errore nella creazione dei dati amministrativi');
+      const errorMessage = error.response?.data?.detail || 'Errore nella creazione dei dati amministrativi';
+      toast.error(errorMessage);
     }
   };
 
