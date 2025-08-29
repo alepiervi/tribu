@@ -221,6 +221,9 @@ backend:
         -working: true
         -agent: "testing"
         -comment: "REVIEW REQUEST TEST 1 COMPLETATO: ✅ CAMBIO STATO VIAGGIO MANUALE funziona perfettamente. Testato con trip ID 76c2e3da-8311-4409-8267-fa036a2252dc: stato cambiato correttamente da 'draft' a 'confirmed' usando PUT /api/trips/{trip_id}/status con payload {'status': 'confirmed'}. Verifica completata con GET /api/trips/{trip_id}/full che conferma il nuovo status. Endpoint funziona come richiesto."
+        -working: true
+        -agent: "testing"
+        -comment: "BUG FIX TESTATO E CONFERMATO: ✅ CORREZIONE FUNZIONA PERFETTAMENTE. Testato scenario completo: 1) Reset viaggio a 'draft' - trip_admin.status automaticamente 'draft' 2) Viaggio NON appare nei report finanziari (corretto) 3) Cambio stato a 'confirmed' - trip_admin.status automaticamente 'confirmed' (QUESTA È LA CORREZIONE) 4) Viaggio ORA appare nei report finanziari con nomi client/agent. OBIETTIVO RAGGIUNTO: Il workflow viaggio → confirmed → automaticamente nei report finanziari funziona correttamente. Fix implementato nelle righe 1481-1494 del backend server.py."
 
   - task: "API modifica note clienti"
     implemented: true
