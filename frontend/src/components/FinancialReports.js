@@ -59,8 +59,8 @@ const FinancialReports = () => {
     try {
       const params = {
         year: selectedYear,
-        ...(selectedMonth && { month: selectedMonth }),
-        ...(selectedAgent && { agent_id: selectedAgent })
+        ...(selectedMonth && selectedMonth !== "all" && { month: selectedMonth }),
+        ...(selectedAgent && selectedAgent !== "all" && { agent_id: selectedAgent })
       };
       
       const response = await axios.get(`${API}/reports/financial`, { params });
