@@ -434,7 +434,355 @@ class TravelAgencyAPITester:
         }
 
         success, result = self.make_request('POST', 'pois', poi_data, token=self.agent_token)
-        self.log_test("Create POI", success, str(result) if not success else "")
+        return True
+
+    def test_new_financial_reports(self):
+        """Test new financial reports endpoint (/api/reports/financial)"""
+        print("\n💰 Testing NEW Financial Reports...")
+        
+        if not self.admin_token or not self.agent_token:
+            print("❌ Skipping financial reports tests - missing tokens")
+            return False
+
+        current_year = datetime.now().year
+        
+        # Test admin access to financial reports (should have can_export_excel: true)
+        success, result = self.make_request('GET', 'reports/financial', token=self.admin_token)
+        if success:
+            self.log_test("Admin financial reports access", True)
+            if 'can_export_excel' in result and result['can_export_excel'] == True:
+                self.log_test("Admin can export Excel (correct)", True)
+            else:
+                self.log_test("Admin can export Excel (incorrect)", False, "Admin should have can_export_excel: true")
+        else:
+            self.log_test("Admin financial reports access", False, str(result))
+
+        # Test agent access to financial reports (should have can_export_excel: false)
+        success, result = self.make_request('GET', 'reports/financial', token=self.agent_token)
+        if success:
+            self.log_test("Agent financial reports access", True)
+            if 'can_export_excel' in result and result['can_export_excel'] == False:
+                self.log_test("Agent cannot export Excel (correct)", True)
+            else:
+                self.log_test("Agent cannot export Excel (incorrect)", False, "Agent should have can_export_excel: false")
+        else:
+            self.log_test("Agent financial reports access", False, str(result))
+
+        # Test with year parameter
+        success, result = self.make_request('GET', f'reports/financial?year={current_year}', token=self.admin_token)
+        if success:
+            self.log_test("Financial reports with year parameter", True)
+            if 'monthly_breakdown' in result:
+                self.log_test("Monthly breakdown included", True)
+            else:
+                self.log_test("Monthly breakdown missing", False, "Should include monthly breakdown for year queries")
+        else:
+            self.log_test("Financial reports with year parameter", False, str(result))
+
+        # Test with month parameter
+        success, result = self.make_request('GET', f'reports/financial?year={current_year}&month=1', token=self.admin_token)
+        self.log_test("Financial reports with month parameter", success, str(result) if not success else "")
+
+        # Test agent-specific reports
+        success, agent_info = self.make_request('GET', 'auth/me', token=self.agent_token)
+        if success and 'id' in agent_info:
+            agent_id = agent_info['id']
+            success, result = self.make_request('GET', f'reports/financial?agent_id={agent_id}', token=self.admin_token)
+            self.log_test("Financial reports for specific agent", success, str(result) if not success else "")
+
+        return True
+
+    def test_financial_sheets_crud(self):
+        """Test financial sheets CRUD operations (/api/financial-sheets)"""
+        print("\n📊 Testing Financial Sheets CRUD...")
+        
+        if not self.admin_token or not self.agent_token:
+            print("❌ Skipping financial sheets tests - missing tokens")
+            return False
+
+        # Test create financial sheet (admin)
+        sheet_data = {
+            "title": "Test Financial Sheet",
+            "description": "Test sheet for API testing",
+            "year": datetime.now().year,
+            "month": datetime.now().month,
+            "data": {
+                "total_revenue": 50000,
+                "total_expenses": 30000,
+                "profit": 20000
+            }
+        }
+
+        success, result = self.make_request('POST', 'financial-sheets', sheet_data, token=self.admin_token)
+        if success:
+            sheet_id = result.get('sheet_id')
+            self.log_test("Create financial sheet (admin)", True)
+        else:
+            self.log_test("Create financial sheet (admin)", False, str(result))
+            return False
+
+        # Test create financial sheet (agent)
+        success, result = self.make_request('POST', 'financial-sheets', sheet_data, token=self.agent_token)
+        self.log_test("Create financial sheet (agent)", success, str(result) if not success else "")
+
+        # Test get financial sheets (admin)
+        success, result = self.make_request('GET', 'financial-sheets', token=self.admin_token)
+        self.log_test("Get financial sheets (admin)", success, str(result) if not success else "")
+
+        # Test get financial sheets (agent)
+        success, result = self.make_request('GET', 'financial-sheets', token=self.agent_token)
+        self.log_test("Get financial sheets (agent)", success, str(result) if not success else "")
+
+        # Test update financial sheet
+        if sheet_id:
+            update_data = {
+                "title": "Updated Financial Sheet",
+                "data": {
+                    "total_revenue": 55000,
+                    "total_expenses": 32000,
+                    "profit": 23000
+                }
+            }
+            success, result = self.make_request('PUT', f'financial-sheets/{sheet_id}', update_data, token=self.admin_token)
+            self.log_test("Update financial sheet", success, str(result) if not success else "")
+
+        return True
+
+    def test_trip_status_management(self):
+        """Test trip status management (/api/trips/{trip_id}/status)"""
+        print("\n🚦 Testing Trip Status Management...")
+        
+        if not self.agent_token or not self.client_token:
+            print("❌ Skipping trip status tests - missing tokens")
+            return False
+
+        # Get client ID for trip creation
+        success, client_info = self.make_request('GET', 'auth/me', token=self.client_token)
+        if not success:
+            print("❌ Could not get client info")
+            return False
+        
+        client_id = client_info['id']
+
+        # Create a trip (should start as draft)
+        trip_data = {
+            'title': 'Status Test Trip',
+            'destination': 'Test Destination',
+            'description': 'Trip for testing status changes',
+            'start_date': (datetime.now(timezone.utc) + timedelta(days=30)).isoformat(),
+            'end_date': (datetime.now(timezone.utc) + timedelta(days=37)).isoformat(),
+            'client_id': client_id,
+            'trip_type': 'cruise'
+        }
+
+        success, result = self.make_request('POST', 'trips', trip_data, token=self.agent_token)
+        if success:
+            trip_id = result['id']
+            initial_status = result.get('status', 'unknown')
+            self.log_test(f"Create trip (initial status: {initial_status})", True)
+            
+            if initial_status == 'draft':
+                self.log_test("Trip starts in draft status (correct)", True)
+            else:
+                self.log_test("Trip starts in draft status (incorrect)", False, f"Expected 'draft', got '{initial_status}'")
+        else:
+            self.log_test("Create trip for status testing", False, str(result))
+            return False
+
+        # Test changing status from draft to active
+        status_update = {"status": "active"}
+        success, result = self.make_request('PUT', f'trips/{trip_id}/status', status_update, token=self.agent_token)
+        self.log_test("Change trip status draft -> active", success, str(result) if not success else "")
+
+        # Verify status change
+        success, result = self.make_request('GET', f'trips/{trip_id}', token=self.agent_token)
+        if success:
+            current_status = result.get('status', 'unknown')
+            if current_status == 'active':
+                self.log_test("Trip status correctly updated to active", True)
+            else:
+                self.log_test("Trip status update verification", False, f"Expected 'active', got '{current_status}'")
+        else:
+            self.log_test("Verify trip status update", False, str(result))
+
+        # Test other status transitions
+        for new_status in ['completed', 'cancelled']:
+            status_update = {"status": new_status}
+            success, result = self.make_request('PUT', f'trips/{trip_id}/status', status_update, token=self.agent_token)
+            self.log_test(f"Change trip status to {new_status}", success, str(result) if not success else "")
+
+        return True
+
+    def test_client_notes_visibility(self):
+        """Test client notes visibility for admin/agent (/api/notes/all)"""
+        print("\n📝 Testing Client Notes Visibility...")
+        
+        if not self.admin_token or not self.agent_token or not self.client_token:
+            print("❌ Skipping notes tests - missing tokens")
+            return False
+
+        # First, create a trip and note for testing
+        success, client_info = self.make_request('GET', 'auth/me', token=self.client_token)
+        if not success:
+            print("❌ Could not get client info")
+            return False
+        
+        client_id = client_info['id']
+
+        # Create a trip
+        trip_data = {
+            'title': 'Notes Test Trip',
+            'destination': 'Test Destination',
+            'description': 'Trip for testing notes',
+            'start_date': (datetime.now(timezone.utc) + timedelta(days=30)).isoformat(),
+            'end_date': (datetime.now(timezone.utc) + timedelta(days=37)).isoformat(),
+            'client_id': client_id,
+            'trip_type': 'cruise'
+        }
+
+        success, result = self.make_request('POST', 'trips', trip_data, token=self.agent_token)
+        if success:
+            trip_id = result['id']
+            self.log_test("Create trip for notes testing", True)
+        else:
+            self.log_test("Create trip for notes testing", False, str(result))
+            return False
+
+        # Create a client note
+        note_data = {
+            'trip_id': trip_id,
+            'day_number': 1,
+            'note_text': 'This is a test note from the client'
+        }
+
+        success, result = self.make_request('POST', f'trips/{trip_id}/notes', note_data, token=self.client_token)
+        if success:
+            note_id = result['id']
+            self.log_test("Create client note", True)
+        else:
+            self.log_test("Create client note", False, str(result))
+            return False
+
+        # Test admin access to all notes
+        success, result = self.make_request('GET', 'notes/all', token=self.admin_token)
+        if success:
+            self.log_test("Admin access to all client notes", True)
+            # Check if our note is in the results
+            notes = result if isinstance(result, list) else []
+            found_note = any(note.get('id') == note_id for note in notes)
+            self.log_test("Admin can see client notes", found_note, "Note not found in admin view" if not found_note else "")
+        else:
+            self.log_test("Admin access to all client notes", False, str(result))
+
+        # Test agent access to all notes
+        success, result = self.make_request('GET', 'notes/all', token=self.agent_token)
+        if success:
+            self.log_test("Agent access to all client notes", True)
+            # Check if our note is in the results
+            notes = result if isinstance(result, list) else []
+            found_note = any(note.get('id') == note_id for note in notes)
+            self.log_test("Agent can see client notes", found_note, "Note not found in agent view" if not found_note else "")
+        else:
+            self.log_test("Agent access to all client notes", False, str(result))
+
+        # Test client cannot access all notes (should be forbidden)
+        success, result = self.make_request('GET', 'notes/all', token=self.client_token, expected_status=403)
+        self.log_test("Client forbidden from all notes endpoint", success, str(result) if not success else "")
+
+        # Test note editing by admin/agent
+        update_data = {
+            'note_text': 'Updated note text by admin'
+        }
+        success, result = self.make_request('PUT', f'notes/{note_id}', update_data, token=self.admin_token)
+        self.log_test("Admin can edit client notes", success, str(result) if not success else "")
+
+        success, result = self.make_request('PUT', f'notes/{note_id}', update_data, token=self.agent_token)
+        self.log_test("Agent can edit client notes", success, str(result) if not success else "")
+
+        return True
+
+    def test_quote_requests(self):
+        """Test quote requests functionality (/api/quote-requests)"""
+        print("\n💬 Testing Quote Requests...")
+        
+        if not self.admin_token or not self.agent_token or not self.client_token:
+            print("❌ Skipping quote requests tests - missing tokens")
+            return False
+
+        # Test client creating quote request
+        quote_data = {
+            'destination': 'Caribbean Islands',
+            'travel_dates': 'March 2025',
+            'number_of_travelers': 2,
+            'trip_type': 'cruise',
+            'budget_range': '2000-3000 EUR',
+            'special_requirements': 'Balcony cabin preferred',
+            'contact_preference': 'email',
+            'notes': 'Honeymoon trip, looking for romantic experience'
+        }
+
+        success, result = self.make_request('POST', 'quote-requests', quote_data, token=self.client_token)
+        if success:
+            request_id = result.get('request_id')
+            self.log_test("Client create quote request", True)
+        else:
+            self.log_test("Client create quote request", False, str(result))
+            return False
+
+        # Test client viewing their quote requests
+        success, result = self.make_request('GET', 'quote-requests', token=self.client_token)
+        if success:
+            self.log_test("Client view own quote requests", True)
+            requests = result if isinstance(result, list) else []
+            found_request = any(req.get('id') == request_id for req in requests)
+            self.log_test("Client can see their quote request", found_request, "Request not found in client view" if not found_request else "")
+        else:
+            self.log_test("Client view own quote requests", False, str(result))
+
+        # Test admin viewing all quote requests
+        success, result = self.make_request('GET', 'quote-requests', token=self.admin_token)
+        if success:
+            self.log_test("Admin view all quote requests", True)
+            requests = result if isinstance(result, list) else []
+            found_request = any(req.get('id') == request_id for req in requests)
+            self.log_test("Admin can see client quote requests", found_request, "Request not found in admin view" if not found_request else "")
+        else:
+            self.log_test("Admin view all quote requests", False, str(result))
+
+        # Test agent viewing all quote requests
+        success, result = self.make_request('GET', 'quote-requests', token=self.agent_token)
+        if success:
+            self.log_test("Agent view all quote requests", True)
+            requests = result if isinstance(result, list) else []
+            found_request = any(req.get('id') == request_id for req in requests)
+            self.log_test("Agent can see client quote requests", found_request, "Request not found in agent view" if not found_request else "")
+        else:
+            self.log_test("Agent view all quote requests", False, str(result))
+
+        # Test updating quote request (admin/agent)
+        if request_id:
+            update_data = {
+                'status': 'in_progress',
+                'notes': 'Working on this request'
+            }
+            success, result = self.make_request('PUT', f'quote-requests/{request_id}', update_data, token=self.admin_token)
+            self.log_test("Admin update quote request", success, str(result) if not success else "")
+
+            success, result = self.make_request('PUT', f'quote-requests/{request_id}', update_data, token=self.agent_token)
+            self.log_test("Agent update quote request", success, str(result) if not success else "")
+
+        return True
+
+    def test_new_endpoints_comprehensive(self):
+        """Run comprehensive tests for all new endpoints"""
+        print("\n🆕 Testing ALL NEW ENDPOINTS...")
+        
+        # Test all new endpoints
+        self.test_new_financial_reports()
+        self.test_financial_sheets_crud()
+        self.test_trip_status_management()
+        self.test_client_notes_visibility()
+        self.test_quote_requests()
 
         return True
 
