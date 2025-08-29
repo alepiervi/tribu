@@ -32,6 +32,10 @@ const FinancialReports = () => {
   const [selectedMonth, setSelectedMonth] = useState('all');
   const [selectedAgent, setSelectedAgent] = useState(user.role === 'agent' ? user.id : 'all');
   const [agents, setAgents] = useState([]);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [exportType, setExportType] = useState('');
+  const [exportYear, setExportYear] = useState(new Date().getFullYear());
+  const [exportMonth, setExportMonth] = useState('');
 
   useEffect(() => {
     if (user?.role === 'admin') {
