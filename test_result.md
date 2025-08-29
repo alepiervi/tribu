@@ -395,10 +395,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "All 3 user-reported problems tested and resolved"
+    - "Rapid verification of 3 corrected problems completed successfully"
   stuck_tasks: []
   test_all: false
-  test_priority: "user_reported_issues_resolved"
+  test_priority: "rapid_verification_completed"
 
 agent_communication:
     -agent: "main"
