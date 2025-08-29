@@ -40,16 +40,18 @@ const ClientDetail = () => {
 
   const fetchClientData = async () => {
     try {
-      const [clientRes, tripsRes, financialRes] = await Promise.all([
-        axios.get(`${API}/users/${clientId}`),
-        axios.get(`${API}/trips/with-details`),
+      setLoading(true);
+      
+      // Use the new endpoints
+      const [clientDetailsRes, financialSummaryRes] = await Promise.all([
+        axios.get(`${API}/clients/${clientId}/details`),
         axios.get(`${API}/clients/${clientId}/financial-summary`)
       ]);
 
-      setClient(clientRes.data);
-      // Filter trips for this client
-      setClientTrips(tripsRes.data.filter(tripData => tripData.trip.client_id === clientId));
-      setFinancialSummary(financialRes.data);
+      setClient(clientDetailsRes.data.client);
+      setClientTrips(clientDetailsRes.data.trips);
+      setFinancialSummary(financialSummaryRes.data);
+      
     } catch (error) {
       console.error('Error fetching client data:', error);
       toast.error('Errore nel caricamento dei dati cliente');
