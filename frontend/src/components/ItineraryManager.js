@@ -99,13 +99,27 @@ const ItineraryManager = () => {
 
   const handleUpdateItinerary = async () => {
     try {
-      await axios.put(`${API}/itineraries/${editingItinerary.id}`, editingItinerary);
+      // Validate required fields
+      if (!editingItinerary.day_number || !editingItinerary.date || !editingItinerary.title) {
+        toast.error('Compila tutti i campi obbligatori');
+        return;
+      }
+
+      const itineraryData = {
+        ...editingItinerary,
+        day_number: parseInt(editingItinerary.day_number),
+        date: new Date(editingItinerary.date).toISOString(),
+        trip_id: tripId
+      };
+
+      await axios.put(`${API}/itineraries/${editingItinerary.id}`, itineraryData);
       toast.success('Giornata aggiornata con successo!');
       setEditingItinerary(null);
       fetchData();
     } catch (error) {
       console.error('Error updating itinerary:', error);
-      toast.error('Errore nell\'aggiornamento della giornata');
+      const errorMessage = error.response?.data?.detail || 'Errore nell\'aggiornamento della giornata';
+      toast.error(errorMessage);
     }
   };
 
