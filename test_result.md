@@ -390,12 +390,12 @@ frontend:
 
 metadata:
   created_by: "main_agent"
-  version: "1.5"
-  test_sequence: 5
+  version: "1.6"
+  test_sequence: 6
   run_ui: true
   backend_testing_completed: true
   backend_test_date: "2025-01-11"
-  backend_tests_passed: "87/88"
+  backend_tests_passed: "90/94"
   frontend_testing_completed: true
   frontend_test_date: "2025-01-11"
   frontend_tests_status: "5_critical_issues_found"
@@ -411,6 +411,10 @@ metadata:
   client_details_test_date: "2025-01-11"
   client_details_test_status: "new_endpoints_working_perfectly"
   client_details_tests_passed: "13/13"
+  orphaned_data_cleanup_tested: true
+  orphaned_data_cleanup_test_date: "2025-01-11"
+  orphaned_data_cleanup_status: "cleanup_system_working_correctly"
+  orphaned_data_cleanup_tests_passed: "comprehensive_test_successful"
 
 test_plan:
   current_focus:
