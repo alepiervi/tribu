@@ -818,6 +818,294 @@ class TravelAgencyAPITester:
 
         return True
 
+    def test_new_features_review_request(self):
+        """Test NEW features from review request: phone field, DELETE quote requests, agent filtering, enriched data"""
+        print("\n🆕 Testing NEW FEATURES from Review Request...")
+        print("🎯 Focus: Campo cellulare, DELETE quote requests, filtro agente, enriched data")
+        print("📋 Credentials: admin@test.it / password123, agent1@test.it / password123")
+        
+        if not self.admin_token or not self.agent_token:
+            print("❌ Skipping new features tests - missing tokens")
+            return False
+
+        # TEST 1: CAMPO CELLULARE USER - Test user creation with phone field
+        print("\n📱 TEST 1: CAMPO CELLULARE USER - Testing user creation with phone field...")
+        
+        # Create user with phone field
+        user_with_phone_data = {
+            "email": "testphone@test.it",
+            "password": "password123", 
+            "first_name": "Cliente",
+            "last_name": "ConPhone",
+            "phone": "+39 123 456 7890",
+            "role": "client"
+        }
+        
+        success, result = self.make_request('POST', 'auth/register', user_with_phone_data)
+        if success:
+            phone_user_id = result.get('user', {}).get('id')
+            phone_user_token = result.get('token')
+            self.log_test("✅ CREATE USER WITH PHONE: POST /api/auth/register", True)
+            
+            # Verify phone field is saved
+            user_info = result.get('user', {})
+            if user_info.get('phone') == "+39 123 456 7890":
+                self.log_test("✅ PHONE FIELD SAVED correctly", True)
+                print(f"   📱 Phone saved: {user_info.get('phone')}")
+            else:
+                self.log_test("❌ PHONE FIELD NOT SAVED", False, f"Expected '+39 123 456 7890', got '{user_info.get('phone')}'")
+            
+            # Verify phone field is retrieved correctly
+            success, user_check = self.make_request('GET', 'auth/me', token=phone_user_token)
+            if success:
+                retrieved_phone = user_check.get('phone')
+                if retrieved_phone == "+39 123 456 7890":
+                    self.log_test("✅ PHONE FIELD RETRIEVED correctly", True)
+                    print(f"   📱 Phone retrieved: {retrieved_phone}")
+                else:
+                    self.log_test("❌ PHONE FIELD RETRIEVAL failed", False, f"Expected '+39 123 456 7890', got '{retrieved_phone}'")
+            else:
+                self.log_test("❌ GET USER INFO failed", False, str(user_check))
+                
+        else:
+            self.log_test("❌ CREATE USER WITH PHONE failed", False, str(result))
+            return False
+
+        # TEST 2: Create test data for quote requests testing
+        print("\n🏗️  TEST 2: Setting up test data for quote requests...")
+        
+        # Create a client for agent1 to manage
+        agent_client_data = {
+            "email": "agentclient@test.it",
+            "password": "password123",
+            "first_name": "Agent",
+            "last_name": "Client",
+            "phone": "+39 987 654 3210",
+            "role": "client"
+        }
+        
+        success, agent_client_result = self.make_request('POST', 'auth/register', agent_client_data)
+        if success:
+            agent_client_id = agent_client_result.get('user', {}).get('id')
+            agent_client_token = agent_client_result.get('token')
+            self.log_test("✅ CREATE AGENT CLIENT", True)
+            
+            # Create a trip for this client with agent1 as agent
+            success, agent_info = self.make_request('GET', 'auth/me', token=self.agent_token)
+            if success:
+                agent_id = agent_info['id']
+                
+                trip_data = {
+                    'title': 'Agent Client Trip',
+                    'destination': 'Mediterranean',
+                    'description': 'Trip for testing agent filtering',
+                    'start_date': (datetime.now(timezone.utc) + timedelta(days=30)).isoformat(),
+                    'end_date': (datetime.now(timezone.utc) + timedelta(days=37)).isoformat(),
+                    'client_id': agent_client_id,
+                    'trip_type': 'cruise'
+                }
+                
+                success, trip_result = self.make_request('POST', 'trips', trip_data, token=self.agent_token)
+                if success:
+                    self.log_test("✅ CREATE TRIP FOR AGENT CLIENT", True)
+                    print(f"   🧳 Trip created: {trip_result['id']}")
+                else:
+                    self.log_test("❌ CREATE TRIP FOR AGENT CLIENT failed", False, str(trip_result))
+            else:
+                self.log_test("❌ GET AGENT INFO failed", False, str(agent_info))
+        else:
+            self.log_test("❌ CREATE AGENT CLIENT failed", False, str(agent_client_result))
+            agent_client_token = None
+
+        # TEST 3: Create quote requests for testing
+        print("\n💬 TEST 3: Creating quote requests for testing...")
+        
+        # Create quote request from phone user
+        if phone_user_token:
+            quote_data_1 = {
+                'destination': 'Maldive Islands',
+                'travel_dates': 'Giugno 2025',
+                'number_of_travelers': 2,
+                'trip_type': 'resort',
+                'budget_range': '3000-4000 EUR',
+                'special_requirements': 'Suite con vista mare',
+                'contact_preference': 'phone',
+                'notes': 'Viaggio di nozze alle Maldive'
+            }
+            
+            success, result = self.make_request('POST', 'quote-requests', quote_data_1, token=phone_user_token)
+            if success:
+                quote_id_1 = result.get('request_id')
+                self.log_test("✅ CREATE QUOTE REQUEST 1 (phone user)", True)
+                print(f"   💬 Quote ID 1: {quote_id_1}")
+            else:
+                self.log_test("❌ CREATE QUOTE REQUEST 1 failed", False, str(result))
+                quote_id_1 = None
+        
+        # Create quote request from agent client
+        if agent_client_token:
+            quote_data_2 = {
+                'destination': 'Caraibi',
+                'travel_dates': 'Luglio 2025',
+                'number_of_travelers': 4,
+                'trip_type': 'cruise',
+                'budget_range': '5000-6000 EUR',
+                'special_requirements': 'Cabine comunicanti',
+                'contact_preference': 'email',
+                'notes': 'Vacanza famiglia con bambini'
+            }
+            
+            success, result = self.make_request('POST', 'quote-requests', quote_data_2, token=agent_client_token)
+            if success:
+                quote_id_2 = result.get('request_id')
+                self.log_test("✅ CREATE QUOTE REQUEST 2 (agent client)", True)
+                print(f"   💬 Quote ID 2: {quote_id_2}")
+            else:
+                self.log_test("❌ CREATE QUOTE REQUEST 2 failed", False, str(result))
+                quote_id_2 = None
+
+        # TEST 4: FILTRO QUOTE REQUESTS PER AGENTE
+        print("\n🔍 TEST 4: FILTRO QUOTE REQUESTS PER AGENTE - Testing agent filtering...")
+        
+        # Test agent1 sees only requests from their clients
+        success, agent_requests = self.make_request('GET', 'quote-requests', token=self.agent_token)
+        if success:
+            self.log_test("✅ AGENT GET QUOTE REQUESTS", True)
+            
+            # Check if agent sees only their client's requests
+            agent_request_ids = [req.get('id') for req in agent_requests]
+            
+            if quote_id_2 and quote_id_2 in agent_request_ids:
+                self.log_test("✅ AGENT SEES OWN CLIENT REQUESTS", True)
+                print(f"   ✅ Agent correctly sees request from their client: {quote_id_2}")
+            else:
+                self.log_test("❌ AGENT MISSING OWN CLIENT REQUESTS", False, f"Agent should see {quote_id_2}")
+            
+            if quote_id_1 and quote_id_1 not in agent_request_ids:
+                self.log_test("✅ AGENT DOESN'T SEE OTHER REQUESTS", True)
+                print(f"   ✅ Agent correctly doesn't see request from other client: {quote_id_1}")
+            else:
+                self.log_test("❌ AGENT SEES UNAUTHORIZED REQUESTS", False, f"Agent shouldn't see {quote_id_1}")
+                
+            print(f"   📊 Agent sees {len(agent_requests)} quote requests")
+        else:
+            self.log_test("❌ AGENT GET QUOTE REQUESTS failed", False, str(agent_requests))
+
+        # Test admin sees all requests
+        success, admin_requests = self.make_request('GET', 'quote-requests', token=self.admin_token)
+        if success:
+            self.log_test("✅ ADMIN GET ALL QUOTE REQUESTS", True)
+            
+            admin_request_ids = [req.get('id') for req in admin_requests]
+            
+            # Admin should see both requests
+            admin_sees_all = True
+            if quote_id_1 and quote_id_1 not in admin_request_ids:
+                admin_sees_all = False
+            if quote_id_2 and quote_id_2 not in admin_request_ids:
+                admin_sees_all = False
+                
+            if admin_sees_all:
+                self.log_test("✅ ADMIN SEES ALL REQUESTS", True)
+                print(f"   ✅ Admin correctly sees all {len(admin_requests)} quote requests")
+            else:
+                self.log_test("❌ ADMIN MISSING SOME REQUESTS", False, "Admin should see all requests")
+        else:
+            self.log_test("❌ ADMIN GET QUOTE REQUESTS failed", False, str(admin_requests))
+
+        # TEST 5: QUOTE REQUESTS ENRICHED - Verify enriched data
+        print("\n📊 TEST 5: QUOTE REQUESTS ENRICHED - Testing enriched data...")
+        
+        if admin_requests:
+            # Check if requests include client_name, client_email, client_phone
+            for request in admin_requests:
+                request_id = request.get('id')
+                has_client_name = 'client_name' in request and request['client_name']
+                has_client_email = 'client_email' in request and request['client_email']
+                has_client_phone = 'client_phone' in request
+                
+                if has_client_name and has_client_email and has_client_phone:
+                    self.log_test(f"✅ ENRICHED DATA for request {request_id[:8]}...", True)
+                    print(f"   👤 Client: {request['client_name']}")
+                    print(f"   📧 Email: {request['client_email']}")
+                    print(f"   📱 Phone: {request['client_phone']}")
+                else:
+                    missing_fields = []
+                    if not has_client_name: missing_fields.append('client_name')
+                    if not has_client_email: missing_fields.append('client_email')
+                    if not has_client_phone: missing_fields.append('client_phone')
+                    self.log_test(f"❌ MISSING ENRICHED DATA for {request_id[:8]}...", False, f"Missing: {missing_fields}")
+
+        # TEST 6: DELETE QUOTE REQUESTS - Test new DELETE endpoint
+        print("\n🗑️  TEST 6: DELETE QUOTE REQUESTS - Testing DELETE endpoint...")
+        
+        if quote_id_1:
+            # Test admin can delete any quote request
+            success, result = self.make_request('DELETE', f'quote-requests/{quote_id_1}', token=self.admin_token)
+            if success:
+                self.log_test("✅ ADMIN DELETE QUOTE REQUEST", True)
+                print(f"   🗑️  Admin successfully deleted quote request: {quote_id_1}")
+                
+                # Verify it's actually deleted
+                success, check_result = self.make_request('GET', 'quote-requests', token=self.admin_token)
+                if success:
+                    remaining_ids = [req.get('id') for req in check_result]
+                    if quote_id_1 not in remaining_ids:
+                        self.log_test("✅ QUOTE REQUEST ACTUALLY DELETED", True)
+                    else:
+                        self.log_test("❌ QUOTE REQUEST NOT DELETED", False, "Request still exists after delete")
+            else:
+                self.log_test("❌ ADMIN DELETE QUOTE REQUEST failed", False, str(result))
+
+        # TEST 7: Test authorization for DELETE
+        print("\n🔐 TEST 7: Testing DELETE authorization...")
+        
+        if quote_id_2:
+            # Test client can delete their own request
+            success, result = self.make_request('DELETE', f'quote-requests/{quote_id_2}', token=agent_client_token)
+            if success:
+                self.log_test("✅ CLIENT DELETE OWN REQUEST", True)
+                print(f"   🗑️  Client successfully deleted own request: {quote_id_2}")
+            else:
+                self.log_test("❌ CLIENT DELETE OWN REQUEST failed", False, str(result))
+            
+            # Create another request to test agent deletion
+            if agent_client_token:
+                quote_data_3 = {
+                    'destination': 'Grecia',
+                    'travel_dates': 'Agosto 2025',
+                    'number_of_travelers': 2,
+                    'trip_type': 'tour',
+                    'budget_range': '2000-3000 EUR',
+                    'special_requirements': 'Tour culturale',
+                    'contact_preference': 'email',
+                    'notes': 'Interessati a storia antica'
+                }
+                
+                success, result = self.make_request('POST', 'quote-requests', quote_data_3, token=agent_client_token)
+                if success:
+                    quote_id_3 = result.get('request_id')
+                    
+                    # Test agent can delete client requests
+                    success, result = self.make_request('DELETE', f'quote-requests/{quote_id_3}', token=self.agent_token)
+                    if success:
+                        self.log_test("✅ AGENT DELETE CLIENT REQUEST", True)
+                        print(f"   🗑️  Agent successfully deleted client request: {quote_id_3}")
+                    else:
+                        self.log_test("❌ AGENT DELETE CLIENT REQUEST failed", False, str(result))
+
+        print("\n✅ NEW FEATURES REVIEW REQUEST TESTING COMPLETED")
+        print("="*60)
+        print("📋 SUMMARY OF NEW FEATURES TESTED:")
+        print("✅ 1. Campo cellulare user - User creation and retrieval with phone field")
+        print("✅ 2. DELETE quote requests - New DELETE /api/quote-requests/{id} endpoint")
+        print("✅ 3. Filtro quote requests per agente - Agent filtering by client relationship")
+        print("✅ 4. Quote requests enriched - client_name, client_email, client_phone included")
+        print("✅ 5. Authorization testing - Admin, agent, client permissions for DELETE")
+        print("="*60)
+        
+        return True
+
     def test_orphaned_data_cleanup(self):
         """Test orphaned data cleanup for financial reports (REVIEW REQUEST)"""
         print("\n🧹 Testing Orphaned Data Cleanup (REVIEW REQUEST)...")
