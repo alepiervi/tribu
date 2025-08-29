@@ -822,6 +822,140 @@ async def create_port_schedule(schedule_data: PortScheduleCreate, current_user: 
     await db.port_schedules.insert_one(schedule_dict)
     return schedule
 
+# Trip Details endpoints
+@api_router.get("/trips/{trip_id}/details")
+async def get_trip_details(trip_id: str, current_user: dict = Depends(get_current_user)):
+    """Get all trip details (cruise, resort, tour, custom) for a specific trip"""
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Get the trip to determine type
+    trip = await db.trips.find_one({"id": trip_id})
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    result = {"trip_type": trip.get("trip_type", "custom")}
+    
+    # Get specific details based on trip type
+    if trip.get("trip_type") == "cruise":
+        cruise_details = await db.cruise_details.find_one({"trip_id": trip_id})
+        if cruise_details:
+            result["cruise_details"] = CruiseDetails(**parse_from_mongo(cruise_details))
+    elif trip.get("trip_type") == "resort":
+        resort_details = await db.resort_details.find_one({"trip_id": trip_id})
+        if resort_details:
+            result["resort_details"] = ResortDetails(**parse_from_mongo(resort_details))
+    elif trip.get("trip_type") == "tour":
+        tour_details = await db.tour_details.find_one({"trip_id": trip_id})
+        if tour_details:
+            result["tour_details"] = TourDetails(**parse_from_mongo(tour_details))
+    else:
+        custom_details = await db.custom_trip_details.find_one({"trip_id": trip_id})
+        if custom_details:
+            result["custom_details"] = CustomTripDetails(**parse_from_mongo(custom_details))
+    
+    return result
+
+@api_router.post("/trips/{trip_id}/cruise-details", response_model=CruiseDetails)
+async def create_or_update_cruise_details(trip_id: str, details: CruiseDetailsUpdate, current_user: dict = Depends(get_current_user)):
+    """Create or update cruise details for a trip"""
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Check if cruise details already exist
+    existing_details = await db.cruise_details.find_one({"trip_id": trip_id})
+    
+    if existing_details:
+        # Update existing details
+        update_data = {k: v for k, v in details.dict().items() if v is not None}
+        update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        
+        await db.cruise_details.update_one({"trip_id": trip_id}, {"$set": update_data})
+        updated_details = await db.cruise_details.find_one({"trip_id": trip_id})
+        return CruiseDetails(**parse_from_mongo(updated_details))
+    else:
+        # Create new details
+        cruise_details = CruiseDetails(trip_id=trip_id, **details.dict(exclude_unset=True))
+        cruise_dict = prepare_for_mongo(cruise_details.dict())
+        
+        await db.cruise_details.insert_one(cruise_dict)
+        return cruise_details
+
+@api_router.post("/trips/{trip_id}/resort-details", response_model=ResortDetails)
+async def create_or_update_resort_details(trip_id: str, details: ResortDetailsUpdate, current_user: dict = Depends(get_current_user)):
+    """Create or update resort details for a trip"""
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Check if resort details already exist
+    existing_details = await db.resort_details.find_one({"trip_id": trip_id})
+    
+    if existing_details:
+        # Update existing details
+        update_data = {k: v for k, v in details.dict().items() if v is not None}
+        update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        
+        await db.resort_details.update_one({"trip_id": trip_id}, {"$set": update_data})
+        updated_details = await db.resort_details.find_one({"trip_id": trip_id})
+        return ResortDetails(**parse_from_mongo(updated_details))
+    else:
+        # Create new details
+        resort_details = ResortDetails(trip_id=trip_id, **details.dict(exclude_unset=True))
+        resort_dict = prepare_for_mongo(resort_details.dict())
+        
+        await db.resort_details.insert_one(resort_dict)
+        return resort_details
+
+@api_router.post("/trips/{trip_id}/tour-details", response_model=TourDetails)
+async def create_or_update_tour_details(trip_id: str, details: TourDetailsUpdate, current_user: dict = Depends(get_current_user)):
+    """Create or update tour details for a trip"""
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Check if tour details already exist
+    existing_details = await db.tour_details.find_one({"trip_id": trip_id})
+    
+    if existing_details:
+        # Update existing details
+        update_data = {k: v for k, v in details.dict().items() if v is not None}
+        update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        
+        await db.tour_details.update_one({"trip_id": trip_id}, {"$set": update_data})
+        updated_details = await db.tour_details.find_one({"trip_id": trip_id})
+        return TourDetails(**parse_from_mongo(updated_details))
+    else:
+        # Create new details
+        tour_details = TourDetails(trip_id=trip_id, **details.dict(exclude_unset=True))
+        tour_dict = prepare_for_mongo(tour_details.dict())
+        
+        await db.tour_details.insert_one(tour_dict)
+        return tour_details
+
+@api_router.post("/trips/{trip_id}/custom-details", response_model=CustomTripDetails)
+async def create_or_update_custom_details(trip_id: str, details: CustomTripDetailsUpdate, current_user: dict = Depends(get_current_user)):
+    """Create or update custom trip details for a trip"""
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Check if custom details already exist
+    existing_details = await db.custom_trip_details.find_one({"trip_id": trip_id})
+    
+    if existing_details:
+        # Update existing details
+        update_data = {k: v for k, v in details.dict().items() if v is not None}
+        update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        
+        await db.custom_trip_details.update_one({"trip_id": trip_id}, {"$set": update_data})
+        updated_details = await db.custom_trip_details.find_one({"trip_id": trip_id})
+        return CustomTripDetails(**parse_from_mongo(updated_details))
+    else:
+        # Create new details
+        custom_details = CustomTripDetails(trip_id=trip_id, **details.dict(exclude_unset=True))
+        custom_dict = prepare_for_mongo(custom_details.dict())
+        
+        await db.custom_trip_details.insert_one(custom_dict)
+        return custom_details
+
 # POI endpoints
 @api_router.get("/pois", response_model=List[POI])
 async def get_pois(category: Optional[POICategory] = None, current_user: dict = Depends(get_current_user)):
