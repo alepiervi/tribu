@@ -294,6 +294,21 @@ backend:
         -agent: "testing"
         -comment: "NUOVI ENDPOINT CLIENT DETAILS TESTATI: GET /api/clients/{client_id}/details e GET /api/clients/{client_id}/financial-summary funzionano perfettamente. Risolvono completamente l'errore 'cliente non trovato' e forniscono tutte le informazioni finanziarie richieste (fatturato €2200, commissioni fornitore €88, commissioni agente €212, sconti €100). Autorizzazioni corrette (admin/agent accesso, client bloccato). 87/88 test passati, 1 problema minore su validazione."
 
+  - task: "Nuove funzionalità review request"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        -working: "needs_testing"
+        -agent: "main"
+        -comment: "Implementate nuove funzionalità: campo cellulare user, DELETE quote requests, filtro agente per quote requests, enriched data con client_name/email/phone"
+        -working: true
+        -agent: "testing"
+        -comment: "🎉 NUOVE FUNZIONALITÀ TESTATE CON SUCCESSO! Testati tutti i 4 focus richiesti nella review request con credenziali admin@test.it/password123 e agent1@test.it/password123. ✅ CAMPO CELLULARE USER: Creazione e recupero utenti con campo phone funziona perfettamente (+39 123 456 7890 salvato e recuperato correttamente). ✅ DELETE QUOTE REQUESTS: Nuovo endpoint DELETE /api/quote-requests/{id} funziona correttamente con autorizzazioni appropriate (admin può eliminare qualsiasi richiesta, client può eliminare solo le proprie, agent può eliminare richieste dei propri clienti). ✅ FILTRO AGENTE: GET /api/quote-requests filtra correttamente per agente - agent1 vede solo richieste dei propri clienti (1 richiesta), admin vede tutte le richieste (11 totali). ✅ ENRICHED DATA: Tutte le quote requests includono client_name, client_email, client_phone nei response (testato su 11 richieste con dati completi). RISULTATO: 33/33 test passati (100% success rate). Tutte le nuove funzionalità implementate e funzionanti come richiesto."
+
 frontend:
   - task: "TripView modifica itinerario/cruise"
     implemented: true
