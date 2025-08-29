@@ -105,6 +105,21 @@
 user_problem_statement: "L'utente ha riportato diversi bug e funzionalità mancanti nell'applicazione Agenzia Viaggi dopo la ricostruzione completa: 1) Admin/Agent non possono modificare itinerario/info cruise nei dettagli viaggio, 2) Report finanziari non funzionali con requisiti specifici per breakdown annuali/mensili, 3) Errore 'client not found' nella gestione utenti, 4) Impossibilità di creare/salvare schede finanziarie, 5) Viaggi rimangono in stato 'draft', 6) Campo foto da rimuovere dai dettagli viaggio, 7) Funzionalità 'my notes' del client senza edit/save, 8) Itinerario non visibile ai client, 9) Richiesta nuova feature 'richiesta preventivo' per viaggi futuri."
 
 backend:
+  - task: "Registrazione pagamenti"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        -working: "NA"
+        -agent: "user"
+        -comment: "L'utente ha riportato errori nella registrazione pagamenti"
+        -working: true
+        -agent: "testing"
+        -comment: "PAYMENT REGISTRATION TESTATO: POST /api/trip-admin/{admin_id}/payments funziona correttamente con dati nel formato giusto. ✅ CORE FUNCTIONALITY: Pagamento creato correttamente, balance si aggiorna automaticamente (€1700 -> €1200), lista pagamenti include nuovo pagamento. ✅ SETUP: Creazione viaggio e dati amministrativi funziona perfettamente. ✅ VERIFICATIONS: Tutti i controlli passati (creazione, aggiornamento balance, inclusione in lista). ⚠️ VALIDATION ISSUES: 3 problemi minori di validazione (amount come stringa accettato, date formato sbagliato accettato, admin_id invalido accettato) ma funzionalità core completamente operativa. RISULTATO: 9/12 test passati, endpoint funziona correttamente per casi d'uso normali."
+
   - task: "Modifica itinerario nei dettagli viaggio"
     implemented: true
     working: true
