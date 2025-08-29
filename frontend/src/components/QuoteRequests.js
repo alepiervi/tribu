@@ -253,7 +253,7 @@ const QuoteRequests = () => {
                       {request.status === 'pending' && (
                         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                           <h4 className="font-medium text-yellow-800 mb-3">Azioni Disponibili</h4>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 flex-wrap">
                             <Button 
                               size="sm" 
                               onClick={() => openResponseDialog(request)}
@@ -279,6 +279,15 @@ const QuoteRequests = () => {
                             >
                               <X className="w-4 h-4" />
                               Rifiuta
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="destructive"
+                              onClick={() => handleDeleteRequest(request.id)}
+                              className="flex items-center gap-2"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Cancella
                             </Button>
                           </div>
                         </div>
