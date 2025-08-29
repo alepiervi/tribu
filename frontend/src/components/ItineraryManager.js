@@ -445,7 +445,7 @@ const ItineraryManager = () => {
                 <p className="text-slate-600 mb-6">
                   Inizia creando il programma della prima giornata del viaggio
                 </p>
-                <Button onClick={() => setShowCreateDialog(true)}>
+                <Button onClick={openCreateDialog}>
                   <Plus className="w-4 h-4 mr-2" />
                   Crea prima giornata
                 </Button>
