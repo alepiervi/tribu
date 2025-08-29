@@ -231,75 +231,108 @@ backend:
 frontend:
   - task: "TripView modifica itinerario/cruise"
     implemented: true
-    working: false
+    working: true
     file: "/app/frontend/src/components/TripView.js"
     stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         -working: false
         -agent: "user"
         -comment: "Impossibile modificare itinerario e info cruise da TripView"
+        -working: true
+        -agent: "testing"
+        -comment: "✅ TESTATO: Pulsanti 'Modifica Itinerario' e 'Amministrazione' presenti e funzionanti per admin/agent. Informazioni crociera visualizzate correttamente. Funzionalità di modifica disponibile."
 
   - task: "FinancialReports completi"
     implemented: true
     working: false
     file: "/app/frontend/src/components/FinancialReports.js"
-    stuck_count: 1
+    stuck_count: 2
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         -working: false
         -agent: "user"
         -comment: "Report finanziari non funzionali, agenti non devono poter esportare in Excel"
+        -working: false
+        -agent: "testing"
+        -comment: "❌ PROBLEMA CRITICO: Report finanziari non caricano dati (404 errori), KPI cards vuote, pulsante export visibile anche per agenti (dovrebbe essere solo admin). Errori console: 'Failed to load resource: the server responded with a status of 404' per /analytics/yearly-summary endpoint."
 
   - task: "Rimozione campo foto"
-    implemented: false
-    working: false
+    implemented: true
+    working: true
     file: "/app/frontend/src/components/TripView.js"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         -working: false
         -agent: "user"
         -comment: "Campo foto deve essere rimosso dai dettagli viaggio per tutti i livelli"
+        -working: true
+        -agent: "testing"
+        -comment: "✅ TESTATO: Campo foto correttamente rimosso dai dettagli viaggio. Non presente in TripView per nessun ruolo."
 
   - task: "My notes edit/save client"
-    implemented: false
+    implemented: true
     working: false
-    file: "/app/frontend/src/components/ClientDashboard.js"
-    stuck_count: 0
+    file: "/app/frontend/src/components/TripView.js"
+    stuck_count: 1
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         -working: false
         -agent: "user"
         -comment: "Funzionalità 'my notes' manca edit/save, note devono essere visibili ad agent/admin"
+        -working: false
+        -agent: "testing"
+        -comment: "❌ PARZIALMENTE FUNZIONANTE: Note clienti implementate con add/save funzionanti, ma manca funzionalità edit per note esistenti. Pulsante 'Modifica' non trovato per note già create."
 
   - task: "Itinerario visibile clienti"
     implemented: true
     working: false
-    file: "/app/frontend/src/components/ClientDashboard.js"
-    stuck_count: 1
+    file: "/app/frontend/src/components/TripView.js"
+    stuck_count: 2
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         -working: false
         -agent: "user"
         -comment: "Itinerario non è visibile ai clienti"
+        -working: false
+        -agent: "testing"
+        -comment: "❌ PROBLEMA: Itinerario tab visibile ai clienti ma contenuto vuoto. Messaggio 'Itinerario non ancora disponibile' mostrato anche quando dovrebbero esserci dati. Possibile problema nel caricamento dati itinerario per clienti."
 
   - task: "Campo richiesta preventivo"
-    implemented: false
-    working: "NA"
-    file: "/app/frontend/src/components/ClientDashboard.js"
-    stuck_count: 0
+    implemented: true
+    working: false
+    file: "/app/frontend/src/components/TripView.js"
+    stuck_count: 1
     priority: "medium"
     needs_retesting: false
     status_history:
         -working: "NA"
         -agent: "main"
         -comment: "Nuova feature da implementare per richieste preventivo"
+        -working: false
+        -agent: "testing"
+        -comment: "❌ IMPLEMENTATO MA NON FUNZIONANTE: Tab 'Richiedi Preventivo' presente per clienti ma form fields non trovati. Possibile problema nel rendering del form di richiesta preventivo."
+
+  - task: "UserManagement client not found"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/components/UserManagement.js"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        -working: false
+        -agent: "user"
+        -comment: "Errore 'client not found' nel dettaglio utente della gestione utenti"
+        -working: false
+        -agent: "testing"
+        -comment: "❌ PROBLEMA: UserManagement interface non carica correttamente. Interfaccia utenti non visualizzata, possibili problemi nel caricamento lista utenti."
 
 metadata:
   created_by: "main_agent"
