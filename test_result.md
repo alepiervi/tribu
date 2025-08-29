@@ -137,6 +137,9 @@ backend:
         -working: true
         -agent: "testing"
         -comment: "70/70 test passati - Report finanziari completi funzionanti con can_export_excel corretto (admin: true, agent: false)"
+        -working: true
+        -agent: "testing"
+        -comment: "FOCUSED TEST COMPLETATO: /api/reports/financial con year=2025 e nessun filtro agente funziona perfettamente. Admin ha accesso completo e permessi export Excel. Struttura response completa con period, totals, monthly_breakdown, detailed_trips. 9/9 test specifici passati."
 
   - task: "Fix errore client not found"
     implemented: true
