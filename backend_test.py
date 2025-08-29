@@ -1350,6 +1350,163 @@ class TravelAgencyAPITester:
 
         return True
 
+    def test_review_request_specific(self):
+        """Test the two specific functionalities requested in the review"""
+        print("\n🎯 Testing REVIEW REQUEST SPECIFIC FUNCTIONALITIES...")
+        print("📋 Credentials: admin@test.it / password123")
+        print("🎯 TEST 1: Manual trip status change (draft → confirmed)")
+        print("🎯 TEST 2: Financial reports with names (client_name, agent_name, trip_title, trip_destination)")
+        
+        if not self.admin_token:
+            print("❌ Skipping review tests - no admin token")
+            return False
+
+        # TEST 1 - CAMBIO STATO VIAGGIO MANUALE
+        print("\n🚦 TEST 1 - MANUAL TRIP STATUS CHANGE...")
+        
+        # Use the existing test trip ID from metadata
+        test_trip_id = "76c2e3da-8311-4409-8267-fa036a2252dc"
+        print(f"🆔 Using existing test trip ID: {test_trip_id}")
+        
+        # STEP 1: Check current status with GET /api/trips/{trip_id}/full
+        print(f"\n📋 STEP 1: Checking current trip status...")
+        success, trip_full = self.make_request('GET', f'trips/{test_trip_id}/full', token=self.admin_token)
+        
+        if success:
+            self.log_test("GET /api/trips/{trip_id}/full", True)
+            current_status = trip_full.get('trip', {}).get('status', 'unknown')
+            trip_title = trip_full.get('trip', {}).get('title', 'Unknown')
+            print(f"   📝 Trip: {trip_title}")
+            print(f"   🚦 Current Status: {current_status}")
+            
+            # STEP 2: Change status from current to "confirmed"
+            print(f"\n🔄 STEP 2: Changing trip status to 'confirmed'...")
+            status_payload = {"status": "confirmed"}
+            
+            success, status_result = self.make_request('PUT', f'trips/{test_trip_id}/status', status_payload, token=self.admin_token)
+            
+            if success:
+                self.log_test("PUT /api/trips/{trip_id}/status (→ confirmed)", True)
+                print(f"   ✅ Status change successful: {status_result.get('message', 'Status updated')}")
+                
+                # STEP 3: Verify status change
+                print(f"\n🔍 STEP 3: Verifying status change...")
+                success, updated_trip = self.make_request('GET', f'trips/{test_trip_id}/full', token=self.admin_token)
+                
+                if success:
+                    new_status = updated_trip.get('trip', {}).get('status', 'unknown')
+                    if new_status == 'confirmed':
+                        self.log_test("✅ Trip status correctly changed to 'confirmed'", True)
+                        print(f"   ✅ Status verified: {current_status} → {new_status}")
+                    else:
+                        self.log_test("Trip status verification", False, f"Expected 'confirmed', got '{new_status}'")
+                else:
+                    self.log_test("Verify status change", False, str(updated_trip))
+            else:
+                self.log_test("PUT /api/trips/{trip_id}/status", False, str(status_result))
+                return False
+        else:
+            self.log_test("GET /api/trips/{trip_id}/full", False, str(trip_full))
+            return False
+
+        # TEST 2 - REPORT FINANZIARI CON NOMI
+        print("\n💰 TEST 2 - FINANCIAL REPORTS WITH NAMES...")
+        
+        # STEP 1: Ensure trip has admin data (create if not exists)
+        print(f"\n📊 STEP 1: Ensuring trip has administrative data...")
+        success, admin_data = self.make_request('GET', f'trips/{test_trip_id}/admin', token=self.admin_token)
+        
+        if not success or not admin_data:
+            print("   ⚠️  No admin data found, creating administrative data...")
+            
+            # Create admin data for the trip
+            admin_create_data = {
+                'trip_id': test_trip_id,
+                'practice_number': 'PR002',
+                'booking_number': 'BK002',
+                'gross_amount': 2500.0,
+                'net_amount': 2200.0,
+                'discount': 150.0,
+                'practice_confirm_date': datetime.now(timezone.utc).isoformat(),
+                'client_departure_date': (datetime.now(timezone.utc) + timedelta(days=30)).isoformat(),
+                'confirmation_deposit': 600.0
+            }
+            
+            success, create_result = self.make_request('POST', f'trips/{test_trip_id}/admin', admin_create_data, token=self.admin_token)
+            
+            if success:
+                self.log_test("✅ Created administrative data for trip", True)
+                print(f"   💰 Admin data created: €{admin_create_data['gross_amount']} gross")
+                
+                # Update admin status to confirmed
+                admin_id = create_result['id']
+                update_data = {'status': 'confirmed'}
+                success, update_result = self.make_request('PUT', f'trip-admin/{admin_id}', update_data, token=self.admin_token)
+                
+                if success:
+                    self.log_test("✅ Set admin data status to 'confirmed'", True)
+                else:
+                    self.log_test("Set admin data status to confirmed", False, str(update_result))
+            else:
+                self.log_test("Create administrative data", False, str(create_result))
+        else:
+            self.log_test("✅ Administrative data exists", True)
+            print(f"   💰 Existing admin data: €{admin_data.get('gross_amount', 0)} gross")
+
+        # STEP 2: Test GET /api/reports/financial?year=2025
+        print(f"\n📈 STEP 2: Testing financial reports with names...")
+        success, financial_report = self.make_request('GET', 'reports/financial?year=2025', token=self.admin_token)
+        
+        if success:
+            self.log_test("GET /api/reports/financial?year=2025", True)
+            
+            # Check if detailed_trips exists and has the required fields
+            detailed_trips = financial_report.get('detailed_trips', [])
+            
+            if detailed_trips:
+                self.log_test(f"✅ Found {len(detailed_trips)} detailed trips in report", True)
+                
+                # Check first trip for required fields
+                first_trip = detailed_trips[0]
+                required_fields = ['client_name', 'agent_name', 'trip_title', 'trip_destination']
+                
+                print(f"\n🔍 STEP 3: Verifying new fields in detailed_trips...")
+                all_fields_present = True
+                
+                for field in required_fields:
+                    if field in first_trip:
+                        self.log_test(f"✅ Field '{field}' present: {first_trip[field]}", True)
+                        print(f"   ✅ {field}: {first_trip[field]}")
+                    else:
+                        self.log_test(f"❌ Field '{field}' missing", False, f"Required field not found in trip data")
+                        all_fields_present = False
+                
+                if all_fields_present:
+                    self.log_test("✅ ALL REQUIRED FIELDS PRESENT in detailed_trips", True)
+                    print(f"\n🎉 SUCCESS: Financial reports now include:")
+                    print(f"   👤 Client Name: {first_trip.get('client_name', 'N/A')}")
+                    print(f"   👨‍💼 Agent Name: {first_trip.get('agent_name', 'N/A')}")
+                    print(f"   🧳 Trip Title: {first_trip.get('trip_title', 'N/A')}")
+                    print(f"   🌍 Trip Destination: {first_trip.get('trip_destination', 'N/A')}")
+                else:
+                    self.log_test("Required fields in detailed_trips", False, "Some required fields missing")
+                
+                # Show additional financial data
+                totals = financial_report.get('totals', {})
+                print(f"\n📊 Financial Summary:")
+                print(f"   💰 Total Revenue: €{totals.get('gross_revenue', 0)}")
+                print(f"   🧮 Total Trips: {totals.get('total_trips', 0)}")
+                print(f"   🎫 Total Discounts: €{totals.get('total_discounts', 0)}")
+                print(f"   👥 Client Departures: {totals.get('client_departures', 0)}")
+                
+            else:
+                self.log_test("Detailed trips in financial report", False, "No detailed_trips found in report")
+        else:
+            self.log_test("GET /api/reports/financial?year=2025", False, str(financial_report))
+
+        print("\n✅ REVIEW REQUEST TESTING COMPLETED")
+        return True
+
     def run_all_tests(self):
         """Run all test suites with focus on new endpoints"""
         print("🚀 Starting Travel Agency API Tests...")
