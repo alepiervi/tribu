@@ -1474,7 +1474,36 @@ async def update_trip_status(
         if not trip.get("title") or not trip.get("client_id"):
             raise HTTPException(status_code=400, detail="Trip must have title and client to be activated/confirmed")
     
+    # Update trip status
     await db.trips.update_one({"id": trip_id}, {"$set": update_data})
+    
+    # IMPORTANT: When trip is confirmed, automatically confirm its administrative data
+    if new_status == "confirmed":
+        # Find and update trip_admin status to "confirmed"
+        trip_admin = await db.trip_admin.find_one({"trip_id": trip_id})
+        if trip_admin:
+            admin_update_data = {
+                "status": "confirmed",
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "updated_by": current_user["id"]
+            }
+            await db.trip_admin.update_one({"trip_id": trip_id}, {"$set": admin_update_data})
+            print(f"✅ Trip {trip_id} confirmed - Administrative data also confirmed")
+        else:
+            print(f"⚠️ Trip {trip_id} confirmed but no administrative data found")
+    
+    # If trip is moved back to draft, also set admin data to draft
+    elif new_status == "draft":
+        trip_admin = await db.trip_admin.find_one({"trip_id": trip_id})
+        if trip_admin:
+            admin_update_data = {
+                "status": "draft",
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "updated_by": current_user["id"]
+            }
+            await db.trip_admin.update_one({"trip_id": trip_id}, {"$set": admin_update_data})
+            print(f"📝 Trip {trip_id} moved to draft - Administrative data also set to draft")
+    
     return {"message": f"Trip status updated to {new_status}"}
 
 # Quote Request Feature
