@@ -1999,9 +1999,19 @@ class TravelAgencyAPITester:
 
 def main():
     """Main test execution"""
-    tester = TravelAgencyAPITester()
-    success = tester.run_all_tests()
-    return 0 if success else 1
+    import sys
+    
+    # Check if we should run only the review request test
+    if len(sys.argv) > 1 and sys.argv[1] == "review-request":
+        print("🎯 Running REVIEW REQUEST test only...")
+        tester = TravelAgencyAPITester()
+        result = tester.run_review_request_test()
+        return 0 if result and result.get('success') else 1
+    else:
+        # Run all tests
+        tester = TravelAgencyAPITester()
+        success = tester.run_all_tests()
+        return 0 if success else 1
 
 if __name__ == "__main__":
     sys.exit(main())
