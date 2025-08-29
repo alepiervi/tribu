@@ -73,60 +73,58 @@ class TravelAgencyAPITester:
             return False, f"Request failed: {str(e)}"
 
     def test_authentication(self):
-        """Test authentication endpoints"""
+        """Test authentication endpoints with provided credentials"""
         print("\n🔐 Testing Authentication System...")
         
-        # Test admin login with existing credentials
+        # Test admin login with provided credentials
         success, result = self.make_request(
             'POST', 'auth/login',
-            {'email': 'admin@test.com', 'password': 'admin123'}
+            {'email': 'admin@test.it', 'password': 'password123'}
         )
         
         if success and 'token' in result:
             self.admin_token = result['token']
-            self.log_test("Admin login", True)
+            self.log_test("Admin login (admin@test.it)", True)
         else:
-            self.log_test("Admin login", False, str(result))
+            self.log_test("Admin login (admin@test.it)", False, str(result))
             return False
 
-        # Test registration for agent
-        timestamp = datetime.now().strftime("%H%M%S")
-        agent_data = {
-            'email': f'agent_{timestamp}@test.com',
-            'password': 'agent123',
-            'first_name': 'Test',
-            'last_name': 'Agent',
-            'role': 'agent'
-        }
+        # Test agent login with provided credentials
+        success, result = self.make_request(
+            'POST', 'auth/login',
+            {'email': 'agent1@test.it', 'password': 'password123'}
+        )
         
-        success, result = self.make_request('POST', 'auth/register', agent_data, expected_status=200)
         if success and 'token' in result:
             self.agent_token = result['token']
-            self.created_resources['users'].append(result['user']['id'])
-            self.log_test("Agent registration", True)
+            self.log_test("Agent login (agent1@test.it)", True)
         else:
-            self.log_test("Agent registration", False, str(result))
+            self.log_test("Agent login (agent1@test.it)", False, str(result))
 
-        # Test registration for client
-        client_data = {
-            'email': f'client_{timestamp}@test.com',
-            'password': 'client123',
-            'first_name': 'Test',
-            'last_name': 'Client',
-            'role': 'client'
-        }
+        # Test client login with provided credentials
+        success, result = self.make_request(
+            'POST', 'auth/login',
+            {'email': 'client1@test.it', 'password': 'password123'}
+        )
         
-        success, result = self.make_request('POST', 'auth/register', client_data, expected_status=200)
         if success and 'token' in result:
             self.client_token = result['token']
-            self.created_resources['users'].append(result['user']['id'])
-            self.log_test("Client registration", True)
+            self.log_test("Client login (client1@test.it)", True)
         else:
-            self.log_test("Client registration", False, str(result))
+            self.log_test("Client login (client1@test.it)", False, str(result))
 
-        # Test /auth/me endpoint
-        success, result = self.make_request('GET', 'auth/me', token=self.admin_token)
-        self.log_test("Get current user info", success, str(result) if not success else "")
+        # Test /auth/me endpoint for all roles
+        if self.admin_token:
+            success, result = self.make_request('GET', 'auth/me', token=self.admin_token)
+            self.log_test("Get admin user info", success, str(result) if not success else "")
+        
+        if self.agent_token:
+            success, result = self.make_request('GET', 'auth/me', token=self.agent_token)
+            self.log_test("Get agent user info", success, str(result) if not success else "")
+            
+        if self.client_token:
+            success, result = self.make_request('GET', 'auth/me', token=self.client_token)
+            self.log_test("Get client user info", success, str(result) if not success else "")
 
         return True
 
