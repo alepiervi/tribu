@@ -127,7 +127,22 @@ const TripAdmin = () => {
 
   const handleCreatePayment = async () => {
     try {
-      await axios.post(`${API}/trip-admin/${adminData.id}/payments`, newPayment);
+      // Validate required fields
+      if (!newPayment.amount || !newPayment.payment_date) {
+        toast.error('Compila tutti i campi obbligatori');
+        return;
+      }
+
+      // Prepare payment data with correct types
+      const paymentData = {
+        trip_admin_id: adminData.id,
+        amount: parseFloat(newPayment.amount),
+        payment_date: new Date(newPayment.payment_date).toISOString(),
+        payment_type: newPayment.payment_type || 'installment',
+        notes: newPayment.notes || ''
+      };
+
+      await axios.post(`${API}/trip-admin/${adminData.id}/payments`, paymentData);
       toast.success('Pagamento registrato con successo!');
       setShowPaymentDialog(false);
       setNewPayment({
@@ -139,7 +154,8 @@ const TripAdmin = () => {
       fetchTripAdminData();
     } catch (error) {
       console.error('Error creating payment:', error);
-      toast.error('Errore nella registrazione del pagamento');
+      const errorMessage = error.response?.data?.detail || 'Errore nella registrazione del pagamento';
+      toast.error(errorMessage);
     }
   };
 
