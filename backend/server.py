@@ -1299,6 +1299,31 @@ async def get_financial_reports(
     confirmed_trips = await db.trip_admin.find(query).to_list(1000)
     parsed_trips = [parse_from_mongo(trip) for trip in confirmed_trips]
     
+    # Enrich trips with client and agent information
+    enriched_trips = []
+    for trip_admin in parsed_trips:
+        # Get trip details
+        trip = await db.trips.find_one({"id": trip_admin.get("trip_id")})
+        if trip:
+            # Get client info
+            client = await db.users.find_one({"id": trip.get("client_id")})
+            # Get agent info
+            agent = await db.users.find_one({"id": trip.get("agent_id")})
+            
+            # Enrich trip_admin data with names
+            enriched_trip = trip_admin.copy()
+            enriched_trip["trip_title"] = trip.get("title", "Unknown Trip")
+            enriched_trip["trip_destination"] = trip.get("destination", "Unknown Destination")
+            enriched_trip["client_name"] = f"{client.get('first_name', 'Unknown')} {client.get('last_name', 'Client')}" if client else "Unknown Client"
+            enriched_trip["agent_name"] = f"{agent.get('first_name', 'Unknown')} {agent.get('last_name', 'Agent')}" if agent else "Unknown Agent"
+            enriched_trip["client_email"] = client.get("email", "") if client else ""
+            enriched_trip["agent_email"] = agent.get("email", "") if agent else ""
+            
+            enriched_trips.append(enriched_trip)
+        else:
+            # Keep original if trip not found (shouldn't happen with proper data)
+            enriched_trips.append(trip_admin)
+    
     # Calculate monthly breakdowns if year provided but no specific month
     monthly_data = []
     if year and not month:
