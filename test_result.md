@@ -405,8 +405,8 @@ frontend:
 
 metadata:
   created_by: "main_agent"
-  version: "1.7"
-  test_sequence: 7
+  version: "1.8"
+  test_sequence: 8
   run_ui: true
   backend_testing_completed: true
   backend_test_date: "2025-01-11"
@@ -434,6 +434,13 @@ metadata:
   payment_registration_test_date: "2025-01-11"
   payment_registration_status: "core_functionality_working_correctly"
   payment_registration_tests_passed: "9/12"
+  complete_test_journey_created: true
+  complete_test_journey_date: "2025-01-11"
+  complete_test_journey_status: "viaggio_completo_con_dati_finanziari_creato"
+  complete_test_journey_tests_passed: "13/13"
+  complete_test_journey_trip_id: "76c2e3da-8311-4409-8267-fa036a2252dc"
+  complete_test_journey_admin_id: "d58543b4-5c2d-48a4-9031-d3c481f693f7"
+  complete_test_journey_client_id: "a625665f-e1c9-4b4c-a6bd-aaef9ae4e5f1"
 
 test_plan:
   current_focus:
