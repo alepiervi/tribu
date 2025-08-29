@@ -15,6 +15,7 @@ import {
   Download,
   BarChart3,
   PieChart,
+  User,
   Users
 } from 'lucide-react';
 import { toast } from 'sonner';
