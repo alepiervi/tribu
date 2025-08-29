@@ -363,7 +363,7 @@ const TripView = () => {
 
         {/* Tabs for different sections */}
         <Tabs defaultValue={tabsToShow[0]} className="space-y-6">
-          <TabsList className={`grid w-full ${tabsToShow.length === 2 ? 'grid-cols-2' : tabsToShow.length === 3 ? 'grid-cols-3' : 'grid-cols-4'}`}>
+          <TabsList className={`grid w-full ${getGridColsClass()}`}>
             {tabsToShow.includes('itinerary') && (
               <TabsTrigger value="itinerary" className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
@@ -374,6 +374,18 @@ const TripView = () => {
               <TabsTrigger value="cruise" className="flex items-center gap-2">
                 <Ship className="w-4 h-4" />
                 Crociera
+              </TabsTrigger>
+            )}
+            {user.role !== 'client' && (
+              <TabsTrigger value="client-notes" className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                Note Clienti
+              </TabsTrigger>
+            )}
+            {user.role !== 'client' && (
+              <TabsTrigger value="trip-details" className="flex items-center gap-2">
+                <Info className="w-4 h-4" />
+                Dettagli Viaggio
               </TabsTrigger>
             )}
             {tabsToShow.includes('notes') && (
