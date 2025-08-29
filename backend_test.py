@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Optional
 
 class TravelAgencyAPITester:
-    def __init__(self, base_url="https://None.preview.emergentagent.com"):
+    def __init__(self, base_url="https://agent-env-eea07452-ca6f-4543-95ee-b1b04668f6ef.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.admin_token = None
