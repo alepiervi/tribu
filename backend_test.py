@@ -818,6 +818,184 @@ class TravelAgencyAPITester:
 
         return True
 
+    def test_new_client_details_endpoints(self):
+        """Test NEW client details endpoints to solve 'client not found' issue"""
+        print("\n🆕 Testing NEW Client Details Endpoints (REVIEW REQUEST)...")
+        print("🎯 Testing endpoints created to solve 'cliente non trovato' problem")
+        
+        if not self.admin_token:
+            print("❌ Skipping client details tests - no admin token")
+            return False
+
+        # STEP 1: Get list of available clients to find a valid client_id
+        print("\n📋 STEP 1: Getting list of available clients...")
+        success, clients_result = self.make_request('GET', 'clients', token=self.admin_token)
+        if not success:
+            self.log_test("Get clients list", False, str(clients_result))
+            return False
+        
+        self.log_test("Get clients list", True)
+        
+        if not clients_result or len(clients_result) == 0:
+            print("⚠️  No clients found in system. Creating test client...")
+            # Create a test client
+            client_data = {
+                'email': 'testclient@test.it',
+                'password': 'password123',
+                'first_name': 'Test',
+                'last_name': 'Client',
+                'role': 'client'
+            }
+            
+            success, result = self.make_request('POST', 'auth/register', client_data)
+            if success:
+                print(f"✅ Created test client: {result.get('user', {}).get('id')}")
+                # Re-fetch clients list
+                success, clients_result = self.make_request('GET', 'clients', token=self.admin_token)
+            else:
+                self.log_test("Create test client", False, str(result))
+                return False
+
+        # Get first available client ID
+        if clients_result and len(clients_result) > 0:
+            client_id = clients_result[0]['id']
+            client_name = f"{clients_result[0]['first_name']} {clients_result[0]['last_name']}"
+            print(f"📋 Using client: {client_name} (ID: {client_id})")
+        else:
+            print("❌ No clients available for testing")
+            return False
+
+        # STEP 2: Test NEW endpoint - GET /api/clients/{client_id}/details
+        print(f"\n🔍 STEP 2: Testing GET /api/clients/{client_id}/details")
+        success, details_result = self.make_request('GET', f'clients/{client_id}/details', token=self.admin_token)
+        
+        if success:
+            self.log_test("GET /api/clients/{client_id}/details", True)
+            
+            # Verify response structure
+            if 'client' in details_result and 'trips' in details_result:
+                self.log_test("Client details response has correct structure (client + trips)", True)
+                
+                # Check client info
+                client_info = details_result['client']
+                if 'id' in client_info and 'first_name' in client_info and 'last_name' in client_info:
+                    self.log_test("Client info contains required fields", True)
+                else:
+                    self.log_test("Client info missing required fields", False, f"Missing fields in: {client_info}")
+                
+                # Check trips array
+                trips = details_result['trips']
+                self.log_test(f"Client has {len(trips)} trips", True)
+                
+                # If trips exist, check structure
+                if trips:
+                    trip = trips[0]
+                    if 'id' in trip and 'title' in trip:
+                        self.log_test("Trip info contains required fields", True)
+                    else:
+                        self.log_test("Trip info missing required fields", False, f"Missing fields in: {trip}")
+                        
+                    # Check if financial data is included
+                    if 'financial' in trip:
+                        if trip['financial']:
+                            self.log_test("Trip includes financial data", True)
+                        else:
+                            self.log_test("Trip financial data is null (no admin data)", True)
+                    else:
+                        self.log_test("Trip missing financial field", False, "Financial field should be present")
+                
+            else:
+                self.log_test("Client details response structure", False, f"Missing 'client' or 'trips' in response: {details_result}")
+        else:
+            self.log_test("GET /api/clients/{client_id}/details", False, str(details_result))
+
+        # STEP 3: Test NEW endpoint - GET /api/clients/{client_id}/financial-summary
+        print(f"\n💰 STEP 3: Testing GET /api/clients/{client_id}/financial-summary")
+        success, summary_result = self.make_request('GET', f'clients/{client_id}/financial-summary', token=self.admin_token)
+        
+        if success:
+            self.log_test("GET /api/clients/{client_id}/financial-summary", True)
+            
+            # Verify response structure
+            required_fields = ['client_id', 'confirmed_bookings', 'pending_bookings', 'stats']
+            missing_fields = [field for field in required_fields if field not in summary_result]
+            
+            if not missing_fields:
+                self.log_test("Financial summary has correct structure", True)
+                
+                # Check confirmed_bookings structure
+                confirmed = summary_result['confirmed_bookings']
+                confirmed_fields = ['count', 'total_gross_amount', 'total_net_amount', 'total_discounts', 'total_supplier_commission', 'total_agent_commission']
+                missing_confirmed = [field for field in confirmed_fields if field not in confirmed]
+                
+                if not missing_confirmed:
+                    self.log_test("Confirmed bookings structure correct", True)
+                    print(f"   💰 Fatturato: €{confirmed['total_gross_amount']}")
+                    print(f"   💸 Commissioni fornitore: €{confirmed['total_supplier_commission']}")
+                    print(f"   💵 Commissioni agente: €{confirmed['total_agent_commission']}")
+                    print(f"   🎫 Sconti: €{confirmed['total_discounts']}")
+                else:
+                    self.log_test("Confirmed bookings missing fields", False, f"Missing: {missing_confirmed}")
+                
+                # Check pending_bookings structure
+                pending = summary_result['pending_bookings']
+                if 'count' in pending and 'pending_gross_amount' in pending:
+                    self.log_test("Pending bookings structure correct", True)
+                    print(f"   ⏳ Prenotazioni pending: {pending['count']}")
+                else:
+                    self.log_test("Pending bookings missing fields", False, f"Missing fields in: {pending}")
+                
+                # Check stats structure
+                stats = summary_result['stats']
+                stats_fields = ['total_trips', 'trips_without_financial_data', 'average_trip_value']
+                missing_stats = [field for field in stats_fields if field not in stats]
+                
+                if not missing_stats:
+                    self.log_test("Stats structure correct", True)
+                    print(f"   📊 Viaggi totali: {stats['total_trips']}")
+                    print(f"   📋 Viaggi senza dati finanziari: {stats['trips_without_financial_data']}")
+                    print(f"   💎 Valore medio viaggio: €{stats['average_trip_value']}")
+                else:
+                    self.log_test("Stats missing fields", False, f"Missing: {missing_stats}")
+                    
+            else:
+                self.log_test("Financial summary structure", False, f"Missing fields: {missing_fields}")
+        else:
+            self.log_test("GET /api/clients/{client_id}/financial-summary", False, str(summary_result))
+
+        # STEP 4: Test with agent token (should also work)
+        if self.agent_token:
+            print(f"\n👤 STEP 4: Testing endpoints with agent token...")
+            
+            success, result = self.make_request('GET', f'clients/{client_id}/details', token=self.agent_token)
+            self.log_test("Agent access to client details", success, str(result) if not success else "")
+            
+            success, result = self.make_request('GET', f'clients/{client_id}/financial-summary', token=self.agent_token)
+            self.log_test("Agent access to client financial summary", success, str(result) if not success else "")
+
+        # STEP 5: Test with client token (should be forbidden)
+        if self.client_token:
+            print(f"\n🚫 STEP 5: Testing endpoints with client token (should be forbidden)...")
+            
+            success, result = self.make_request('GET', f'clients/{client_id}/details', token=self.client_token, expected_status=403)
+            self.log_test("Client forbidden from client details", success, str(result) if not success else "")
+            
+            success, result = self.make_request('GET', f'clients/{client_id}/financial-summary', token=self.client_token, expected_status=403)
+            self.log_test("Client forbidden from financial summary", success, str(result) if not success else "")
+
+        # STEP 6: Test with invalid client_id
+        print(f"\n❌ STEP 6: Testing with invalid client_id...")
+        invalid_id = "invalid-client-id-12345"
+        
+        success, result = self.make_request('GET', f'clients/{invalid_id}/details', token=self.admin_token, expected_status=404)
+        self.log_test("Invalid client_id returns 404 for details", success, str(result) if not success else "")
+        
+        success, result = self.make_request('GET', f'clients/{invalid_id}/financial-summary', token=self.admin_token, expected_status=404)
+        self.log_test("Invalid client_id returns 404 for financial summary", success, str(result) if not success else "")
+
+        print("\n✅ NEW CLIENT DETAILS ENDPOINTS TESTING COMPLETED")
+        return True
+
     def test_new_endpoints_comprehensive(self):
         """Run comprehensive tests for all new endpoints"""
         print("\n🆕 Testing ALL NEW ENDPOINTS...")
