@@ -209,11 +209,11 @@ backend:
 
   - task: "API richiesta preventivo"
     implemented: true
-    working: "needs_testing"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         -working: "NA"
         -agent: "main"
@@ -221,6 +221,9 @@ backend:
         -working: "needs_testing"
         -agent: "main"
         -comment: "Implementati endpoint /quote-requests per CRUD completo richieste preventivo"
+        -working: true
+        -agent: "testing"
+        -comment: "✅ TESTATO COMPLETAMENTE: Endpoint /api/quote-requests funziona perfettamente. Client può creare richieste preventivo. Admin e Agent possono vedere tutte le richieste. Client vede solo le proprie. Admin e Agent possono aggiornare le richieste. CRUD completo implementato correttamente."
 
 frontend:
   - task: "TripView modifica itinerario/cruise"
