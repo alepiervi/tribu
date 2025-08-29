@@ -82,8 +82,18 @@ const AuthProvider = ({ children }) => {
 
   const getCurrentUser = async () => {
     try {
+      const storedToken = localStorage.getItem('token');
+      if (!storedToken) {
+        setLoading(false);
+        return;
+      }
+      
+      // Ensure token is set in axios headers
+      axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+      
       const response = await axios.get(`${API}/auth/me`);
       setUser(response.data);
+      setToken(storedToken); // Ensure state is consistent
     } catch (error) {
       console.error('Failed to get current user:', error);
       logout();
