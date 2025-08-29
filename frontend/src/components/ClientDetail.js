@@ -505,54 +505,6 @@ const ClientDetail = () => {
                   </CardContent>
                 </Card>
               </div>
-                      <div className="space-y-4">
-                        {financialSummary.confirmed_booking_details.map((booking) => (
-                          <div key={booking.trip_id} className="border border-slate-200 rounded-lg p-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex-1">
-                                <h4 className="font-semibold text-slate-800 mb-1">
-                                  {booking.trip_title}
-                                </h4>
-                                <p className="text-sm text-slate-600 mb-2">
-                                  {booking.trip_destination} | Pratica: {booking.practice_number}
-                                </p>
-                                <div className="text-xs text-slate-500">
-                                  Confermato: {booking.confirmation_date && new Date(booking.confirmation_date).toLocaleDateString('it-IT')} | 
-                                  Partenza: {booking.departure_date && new Date(booking.departure_date).toLocaleDateString('it-IT')}
-                                </div>
-                              </div>
-                              
-                              <div className="grid grid-cols-3 gap-4 text-sm">
-                                <div className="text-right">
-                                  <div className="font-semibold">{formatCurrency(booking.gross_amount)}</div>
-                                  <div className="text-slate-500">Fatturato</div>
-                                </div>
-                                <div className="text-right">
-                                  <div className="font-semibold text-red-600">
-                                    -{formatCurrency(booking.discount)}
-                                  </div>
-                                  <div className="text-slate-500">Sconto</div>
-                                </div>
-                                <div className="text-right">
-                                  <div className="font-semibold text-green-600">
-                                    {formatCurrency(booking.agent_commission)}
-                                  </div>
-                                  <div className="text-slate-500">Commissione</div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <DollarSign className="mx-auto h-12 w-12 text-slate-400 mb-4" />
-                        <p className="text-slate-500">Nessuna prenotazione confermata</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
             ) : (
               <Card>
                 <CardContent className="text-center py-16">
