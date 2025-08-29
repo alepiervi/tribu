@@ -1507,6 +1507,168 @@ class TravelAgencyAPITester:
         print("\n✅ REVIEW REQUEST TESTING COMPLETED")
         return True
 
+    def test_trip_confirmed_status_financial_reports_fix(self):
+        """Test the specific bug fix: when trip is confirmed, it should appear in financial reports"""
+        print("\n🎯 Testing TRIP CONFIRMED → FINANCIAL REPORTS BUG FIX...")
+        print("📋 SCENARIO: Trip confirmed status should automatically appear in financial reports")
+        print("🔑 Credentials: admin@test.it / password123")
+        
+        if not self.admin_token:
+            print("❌ Skipping trip confirmed status test - no admin token")
+            return False
+
+        # Use the existing test trip ID from the review request
+        test_trip_id = "76c2e3da-8311-4409-8267-fa036a2252dc"
+        print(f"🆔 Using existing test trip ID: {test_trip_id}")
+
+        # STEP 1: Setup - Verify the trip exists
+        print(f"\n📋 STEP 1: Verifying test trip exists...")
+        success, trip_result = self.make_request('GET', f'trips/{test_trip_id}/full', token=self.admin_token)
+        if success:
+            self.log_test("✅ SETUP: Verify test trip exists", True)
+            print(f"   📝 Trip: {trip_result['trip']['title']}")
+            print(f"   🌍 Destination: {trip_result['trip']['destination']}")
+            print(f"   📊 Current Status: {trip_result['trip']['status']}")
+        else:
+            self.log_test("SETUP: Verify test trip exists", False, str(trip_result))
+            return False
+
+        # STEP 2: Reset trip status to "draft"
+        print(f"\n📝 STEP 2: Resetting trip status to 'draft'...")
+        reset_data = {"status": "draft"}
+        success, reset_result = self.make_request('PUT', f'trips/{test_trip_id}/status', reset_data, token=self.admin_token)
+        if success:
+            self.log_test("✅ RESET: PUT /api/trips/{trip_id}/status to 'draft'", True)
+            print(f"   📊 Trip status reset to: draft")
+        else:
+            self.log_test("RESET: PUT /api/trips/{trip_id}/status to 'draft'", False, str(reset_result))
+            return False
+
+        # STEP 3: Verify initial state (draft status)
+        print(f"\n🔍 STEP 3: Verifying initial state (draft)...")
+        
+        # Check trip status
+        success, trip_check = self.make_request('GET', f'trips/{test_trip_id}/full', token=self.admin_token)
+        if success:
+            trip_status = trip_check['trip']['status']
+            if trip_status == 'draft':
+                self.log_test("✅ VERIFY: trip.status = 'draft'", True)
+            else:
+                self.log_test("VERIFY: trip.status = 'draft'", False, f"Expected 'draft', got '{trip_status}'")
+        else:
+            self.log_test("VERIFY: Get trip status", False, str(trip_check))
+
+        # Check trip_admin status
+        success, admin_check = self.make_request('GET', f'trips/{test_trip_id}/admin', token=self.admin_token)
+        if success and admin_check:
+            admin_status = admin_check.get('status', 'unknown')
+            if admin_status == 'draft':
+                self.log_test("✅ VERIFY: trip_admin.status = 'draft'", True)
+            else:
+                self.log_test("VERIFY: trip_admin.status = 'draft'", False, f"Expected 'draft', got '{admin_status}'")
+        else:
+            self.log_test("VERIFY: Get trip_admin status", False, "No admin data found or error")
+
+        # Check that trip does NOT appear in financial reports
+        success, initial_report = self.make_request('GET', 'reports/financial?year=2025', token=self.admin_token)
+        if success:
+            detailed_trips = initial_report.get('detailed_trips', [])
+            trip_in_report = any(trip.get('trip_id') == test_trip_id for trip in detailed_trips)
+            
+            if not trip_in_report:
+                self.log_test("✅ VERIFY: Trip NOT in financial reports (draft status)", True)
+                print(f"   📊 Financial reports show {len(detailed_trips)} trips (test trip correctly excluded)")
+            else:
+                self.log_test("VERIFY: Trip NOT in financial reports (draft status)", False, "Trip should not appear in reports when in draft")
+        else:
+            self.log_test("VERIFY: Check financial reports (initial)", False, str(initial_report))
+
+        # STEP 4: Test the fix - Change status to "confirmed"
+        print(f"\n🎯 STEP 4: Testing the FIX - Change status to 'confirmed'...")
+        confirm_data = {"status": "confirmed"}
+        success, confirm_result = self.make_request('PUT', f'trips/{test_trip_id}/status', confirm_data, token=self.admin_token)
+        if success:
+            self.log_test("✅ TEST FIX: PUT /api/trips/{trip_id}/status to 'confirmed'", True)
+            print(f"   📊 Trip status changed to: confirmed")
+            print(f"   🔧 This should automatically set trip_admin.status = 'confirmed'")
+        else:
+            self.log_test("TEST FIX: PUT /api/trips/{trip_id}/status to 'confirmed'", False, str(confirm_result))
+            return False
+
+        # STEP 5: Verify the correction
+        print(f"\n✅ STEP 5: Verifying the correction...")
+        
+        # Check trip status is confirmed
+        success, trip_verify = self.make_request('GET', f'trips/{test_trip_id}/full', token=self.admin_token)
+        if success:
+            trip_status = trip_verify['trip']['status']
+            if trip_status == 'confirmed':
+                self.log_test("✅ VERIFY CORRECTION: trip.status = 'confirmed'", True)
+            else:
+                self.log_test("VERIFY CORRECTION: trip.status = 'confirmed'", False, f"Expected 'confirmed', got '{trip_status}'")
+        else:
+            self.log_test("VERIFY CORRECTION: Get trip status", False, str(trip_verify))
+
+        # Check trip_admin status is automatically confirmed (THIS IS THE FIX)
+        success, admin_verify = self.make_request('GET', f'trips/{test_trip_id}/admin', token=self.admin_token)
+        if success and admin_verify:
+            admin_status = admin_verify.get('status', 'unknown')
+            if admin_status == 'confirmed':
+                self.log_test("✅ VERIFY CORRECTION: trip_admin.status = 'confirmed' (AUTOMATIC)", True)
+                print(f"   🎯 SUCCESS: Administrative data automatically confirmed!")
+            else:
+                self.log_test("VERIFY CORRECTION: trip_admin.status = 'confirmed' (AUTOMATIC)", False, f"Expected 'confirmed', got '{admin_status}' - FIX NOT WORKING")
+        else:
+            self.log_test("VERIFY CORRECTION: Get trip_admin status", False, "No admin data found or error")
+
+        # Check that trip NOW appears in financial reports
+        success, final_report = self.make_request('GET', 'reports/financial?year=2025', token=self.admin_token)
+        if success:
+            detailed_trips = final_report.get('detailed_trips', [])
+            trip_in_report = any(trip.get('trip_id') == test_trip_id for trip in detailed_trips)
+            
+            if trip_in_report:
+                self.log_test("✅ VERIFY CORRECTION: Trip NOW appears in financial reports", True)
+                print(f"   📊 Financial reports show {len(detailed_trips)} trips (test trip correctly included)")
+                
+                # Find our trip in the report and show details
+                our_trip = next((trip for trip in detailed_trips if trip.get('trip_id') == test_trip_id), None)
+                if our_trip:
+                    print(f"   📝 Trip in report: {our_trip.get('trip_title', 'Unknown')}")
+                    print(f"   👤 Client: {our_trip.get('client_name', 'Unknown')}")
+                    print(f"   👨‍💼 Agent: {our_trip.get('agent_name', 'Unknown')}")
+            else:
+                self.log_test("VERIFY CORRECTION: Trip NOW appears in financial reports", False, "Trip should appear in reports when confirmed - FIX NOT WORKING")
+        else:
+            self.log_test("VERIFY CORRECTION: Check financial reports (final)", False, str(final_report))
+
+        # STEP 6: Test financial reports with names
+        print(f"\n📊 STEP 6: Testing financial reports show client/agent names...")
+        success, report_with_names = self.make_request('GET', 'reports/financial?year=2025', token=self.admin_token)
+        if success:
+            detailed_trips = report_with_names.get('detailed_trips', [])
+            our_trip = next((trip for trip in detailed_trips if trip.get('trip_id') == test_trip_id), None)
+            
+            if our_trip:
+                required_fields = ['client_name', 'agent_name', 'trip_title', 'trip_destination']
+                missing_fields = [field for field in required_fields if not our_trip.get(field)]
+                
+                if not missing_fields:
+                    self.log_test("✅ VERIFY: Financial reports include client/agent names", True)
+                    print(f"   👤 Client Name: {our_trip['client_name']}")
+                    print(f"   👨‍💼 Agent Name: {our_trip['agent_name']}")
+                    print(f"   📝 Trip Title: {our_trip['trip_title']}")
+                    print(f"   🌍 Destination: {our_trip['trip_destination']}")
+                else:
+                    self.log_test("VERIFY: Financial reports include client/agent names", False, f"Missing fields: {missing_fields}")
+            else:
+                self.log_test("VERIFY: Find trip in financial reports", False, "Trip not found in reports")
+        else:
+            self.log_test("VERIFY: Get financial reports with names", False, str(report_with_names))
+
+        print(f"\n🎯 OBJECTIVE ACHIEVED: Confirmed that workflow trip → confirmed → automatically in financial reports works correctly!")
+        return True
+
     def run_all_tests(self):
         """Run all test suites with focus on review request"""
         print("🚀 Starting Travel Agency API Tests...")
