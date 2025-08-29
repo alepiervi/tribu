@@ -215,6 +215,9 @@ backend:
         -working: true
         -agent: "testing"
         -comment: "Gestione stati viaggi funzionante (draft → active → completed/cancelled)"
+        -working: true
+        -agent: "testing"
+        -comment: "REVIEW REQUEST TEST 1 COMPLETATO: ✅ CAMBIO STATO VIAGGIO MANUALE funziona perfettamente. Testato con trip ID 76c2e3da-8311-4409-8267-fa036a2252dc: stato cambiato correttamente da 'draft' a 'confirmed' usando PUT /api/trips/{trip_id}/status con payload {'status': 'confirmed'}. Verifica completata con GET /api/trips/{trip_id}/full che conferma il nuovo status. Endpoint funziona come richiesto."
 
   - task: "API modifica note clienti"
     implemented: true
