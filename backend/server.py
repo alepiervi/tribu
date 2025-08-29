@@ -1048,21 +1048,20 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
     if current_user["role"] == "admin":
         total_trips = await db.trips.count_documents({})
         total_users = await db.users.count_documents({})
-        active_trips = await db.trips.count_documents({"status": "active"})
+        confirmed_trips = await db.trips.count_documents({"status": "confirmed"})
         
         return {
             "total_trips": total_trips,
             "total_users": total_users,
-            "active_trips": active_trips,
-            "total_photos": await db.client_photos.count_documents({})
+            "confirmed_trips": confirmed_trips
         }
     elif current_user["role"] == "agent":
         agent_trips = await db.trips.count_documents({"agent_id": current_user["id"]})
-        active_trips = await db.trips.count_documents({"agent_id": current_user["id"], "status": "active"})
+        confirmed_trips = await db.trips.count_documents({"agent_id": current_user["id"], "status": "confirmed"})
         
         return {
             "my_trips": agent_trips,
-            "active_trips": active_trips,
+            "confirmed_trips": confirmed_trips,
             "completed_trips": await db.trips.count_documents({"agent_id": current_user["id"], "status": "completed"})
         }
     else:  # client
