@@ -300,11 +300,11 @@ frontend:
 
   - task: "Itinerario visibile clienti"
     implemented: true
-    working: "needs_retesting"
+    working: "NA"
     file: "/app/frontend/src/components/TripView.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         -working: false
         -agent: "user"
@@ -315,6 +315,9 @@ frontend:
         -working: "needs_retesting"
         -agent: "main"
         -comment: "CORRETTO: Modificato fetchTripData per caricare itinerario per tutti i ruoli, eliminata distinzione nel caricamento dati itinerario"
+        -working: "NA"
+        -agent: "testing"
+        -comment: "⚠️ NON TESTABILE: Clienti non hanno viaggi assegnati nel sistema per testare la visibilità dell'itinerario. Funzionalità implementata ma richiede dati di test."
 
   - task: "Campo richiesta preventivo"
     implemented: true
