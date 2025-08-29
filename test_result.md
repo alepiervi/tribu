@@ -101,3 +101,189 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "L'utente ha riportato diversi bug e funzionalità mancanti nell'applicazione Agenzia Viaggi dopo la ricostruzione completa: 1) Admin/Agent non possono modificare itinerario/info cruise nei dettagli viaggio, 2) Report finanziari non funzionali con requisiti specifici per breakdown annuali/mensili, 3) Errore 'client not found' nella gestione utenti, 4) Impossibilità di creare/salvare schede finanziarie, 5) Viaggi rimangono in stato 'draft', 6) Campo foto da rimuovere dai dettagli viaggio, 7) Funzionalità 'my notes' del client senza edit/save, 8) Itinerario non visibile ai client, 9) Richiesta nuova feature 'richiesta preventivo' per viaggi futuri."
+
+backend:
+  - task: "Modifica itinerario nei dettagli viaggio"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        -working: false
+        -agent: "user"
+        -comment: "Admin/Agent non possono modificare itinerario/informazioni cruise nei dettagli viaggio"
+
+  - task: "Report finanziari completi"
+    implemented: false
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        -working: false
+        -agent: "user"
+        -comment: "Report finanziari non funzionali, necessari breakdown annuali/mensili con fatturato lordo, commissioni, sconti, partenze clienti"
+
+  - task: "Fix errore client not found"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        -working: false
+        -agent: "user"
+        -comment: "Errore 'client not found' nel dettaglio utente della gestione utenti"
+
+  - task: "Creazione schede finanziarie"
+    implemented: false
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        -working: false
+        -agent: "user"
+        -comment: "Impossibile creare e salvare schede finanziarie"
+
+  - task: "Stato viaggi oltre draft"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        -working: false
+        -agent: "user"
+        -comment: "I viaggi creati rimangono in stato 'draft'"
+
+  - task: "API modifica note clienti"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        -working: false
+        -agent: "user"
+        -comment: "Note clienti devono essere modificabili e visibili a agent/admin"
+
+  - task: "API richiesta preventivo"
+    implemented: false
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        -working: "NA"
+        -agent: "main"
+        -comment: "Nuova feature da implementare per richieste preventivo viaggi futuri"
+
+frontend:
+  - task: "TripView modifica itinerario/cruise"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/components/TripView.js"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        -working: false
+        -agent: "user"
+        -comment: "Impossibile modificare itinerario e info cruise da TripView"
+
+  - task: "FinancialReports completi"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/components/FinancialReports.js"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        -working: false
+        -agent: "user"
+        -comment: "Report finanziari non funzionali, agenti non devono poter esportare in Excel"
+
+  - task: "Rimozione campo foto"
+    implemented: false
+    working: false
+    file: "/app/frontend/src/components/TripView.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        -working: false
+        -agent: "user"
+        -comment: "Campo foto deve essere rimosso dai dettagli viaggio per tutti i livelli"
+
+  - task: "My notes edit/save client"
+    implemented: false
+    working: false
+    file: "/app/frontend/src/components/ClientDashboard.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        -working: false
+        -agent: "user"
+        -comment: "Funzionalità 'my notes' manca edit/save, note devono essere visibili ad agent/admin"
+
+  - task: "Itinerario visibile clienti"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/components/ClientDashboard.js"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        -working: false
+        -agent: "user"
+        -comment: "Itinerario non è visibile ai clienti"
+
+  - task: "Campo richiesta preventivo"
+    implemented: false
+    working: "NA"
+    file: "/app/frontend/src/components/ClientDashboard.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        -working: "NA"
+        -agent: "main"
+        -comment: "Nuova feature da implementare per richieste preventivo"
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 0
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Modifica itinerario nei dettagli viaggio"
+    - "Report finanziari completi"
+    - "Fix errore client not found"
+    - "Stato viaggi oltre draft"
+  stuck_tasks:
+    - "Modifica itinerario nei dettagli viaggio"
+    - "Fix errore client not found"
+    - "Stato viaggi oltre draft"
+    - "TripView modifica itinerario/cruise"
+    - "FinancialReports completi"
+    - "Itinerario visibile clienti"
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+    -agent: "main"
+    -message: "Iniziando correzioni backend per primo batch: API mancanti per modifica itinerario/cruise, report finanziari completi, fix client not found, gestione stato viaggi"
