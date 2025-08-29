@@ -46,6 +46,7 @@ class TripType(str, Enum):
 class TripStatus(str, Enum):
     DRAFT = "draft"
     ACTIVE = "active"
+    CONFIRMED = "confirmed"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
 
