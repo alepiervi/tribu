@@ -233,8 +233,8 @@ const ClientDetail = () => {
               <CardContent>
                 {clientTrips.length > 0 ? (
                   <div className="space-y-4">
-                    {clientTrips.map((tripData) => (
-                      <div key={tripData.trip.id} className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    {clientTrips.map((trip) => (
+                      <div key={trip.id} className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                         <div className="flex items-start justify-between">
                           <div className="flex items-start gap-4">
                             <div className="p-3 bg-teal-50 rounded-lg">
@@ -242,48 +242,101 @@ const ClientDetail = () => {
                             </div>
                             <div className="flex-1">
                               <h3 className="text-lg font-semibold text-slate-800 mb-2">
-                                {tripData.trip.title}
+                                {trip.title}
                               </h3>
                               
                               <div className="flex items-center gap-4 text-sm text-slate-600 mb-3">
                                 <div className="flex items-center gap-1">
                                   <MapPin className="w-4 h-4" />
-                                  <span>{tripData.trip.destination}</span>
+                                  <span>{trip.destination}</span>
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <Calendar className="w-4 h-4" />
                                   <span>
-                                    {new Date(tripData.trip.start_date).toLocaleDateString('it-IT')} - 
-                                    {new Date(tripData.trip.end_date).toLocaleDateString('it-IT')}
+                                    {new Date(trip.start_date).toLocaleDateString('it-IT')} - 
+                                    {new Date(trip.end_date).toLocaleDateString('it-IT')}
                                   </span>
                                 </div>
-                                {tripData.agent && (
-                                  <div className="flex items-center gap-1">
-                                    <User className="w-4 h-4" />
-                                    <span>
-                                      Agente: {tripData.agent.first_name} {tripData.agent.last_name}
-                                    </span>
-                                  </div>
-                                )}
                               </div>
                               
                               <p className="text-slate-600 mb-4 line-clamp-2">
-                                {tripData.trip.description}
+                                {trip.description}
                               </p>
                               
-                              <div className="flex items-center gap-3">
-                                <Badge className={getStatusColor(tripData.trip.status)}>
-                                  {tripData.trip.status}
+                              <div className="flex items-center gap-3 mb-4">
+                                <Badge className={getStatusColor(trip.status)}>
+                                  {trip.status}
                                 </Badge>
-                                <Badge className={getTripTypeColor(tripData.trip.trip_type)}>
-                                  {tripData.trip.trip_type}
+                                <Badge className={getTripTypeColor(trip.trip_type)}>
+                                  {trip.trip_type}
                                 </Badge>
                               </div>
+
+                              {/* Financial Information - This is what the user requested */}
+                              {trip.financial && (
+                                <div className="bg-slate-50 rounded-lg p-4 mt-4">
+                                  <h4 className="font-medium text-slate-800 mb-3 flex items-center gap-2">
+                                    <DollarSign className="w-4 h-4" />
+                                    Dettagli Finanziari
+                                  </h4>
+                                  
+                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                    <div>
+                                      <span className="block text-slate-600">Fatturato</span>
+                                      <span className="font-semibold text-green-600">
+                                        {formatCurrency(trip.financial.gross_amount)}
+                                      </span>
+                                    </div>
+                                    
+                                    <div>
+                                      <span className="block text-slate-600">Commissione Fornitore</span>
+                                      <span className="font-semibold text-purple-600">
+                                        {formatCurrency(trip.financial.supplier_commission)}
+                                      </span>
+                                    </div>
+                                    
+                                    <div>
+                                      <span className="block text-slate-600">Sconto Applicato</span>
+                                      <span className="font-semibold text-orange-600">
+                                        {formatCurrency(trip.financial.discount)}
+                                      </span>
+                                    </div>
+                                    
+                                    <div>
+                                      <span className="block text-slate-600">Commissione Agente</span>
+                                      <span className="font-semibold text-blue-600">
+                                        {formatCurrency(trip.financial.agent_commission)}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <div className="mt-3 pt-3 border-t border-slate-200">
+                                    <div className="flex items-center justify-between text-sm">
+                                      <span className="text-slate-600">
+                                        Pratica: {trip.financial.practice_number} | 
+                                        Prenotazione: {trip.financial.booking_number}
+                                      </span>
+                                      <Badge variant={trip.financial.status === 'confirmed' ? 'default' : 'secondary'}>
+                                        {trip.financial.status}
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {!trip.financial && (
+                                <div className="bg-yellow-50 rounded-lg p-3 mt-4">
+                                  <p className="text-sm text-yellow-700 flex items-center gap-2">
+                                    <TrendingUp className="w-4 h-4" />
+                                    Dati finanziari non ancora configurati per questo viaggio
+                                  </p>
+                                </div>
+                              )}
                             </div>
                           </div>
                           
                           <div className="ml-4">
-                            <Link to={`/trips/${tripData.trip.id}`}>
+                            <Link to={`/trips/${trip.id}`}>
                               <Button size="sm" className="flex items-center gap-2">
                                 <Eye className="w-4 h-4" />
                                 Visualizza
