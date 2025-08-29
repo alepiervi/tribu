@@ -1354,15 +1354,15 @@ async def get_financial_reports(
             }
             monthly_data.append(monthly_summary)
     
-    # Calculate totals
+    # Calculate totals using enriched_trips
     totals = {
-        "total_trips": len(confirmed_trips),
-        "gross_revenue": sum(trip.get("gross_amount", 0) for trip in confirmed_trips),
-        "total_discounts": sum(trip.get("discount", 0) for trip in confirmed_trips),
-        "supplier_commissions": sum(trip.get("supplier_commission", 0) for trip in confirmed_trips),
-        "agent_commissions": sum(trip.get("agent_commission", 0) for trip in confirmed_trips),
-        "net_revenue": sum(trip.get("net_amount", 0) for trip in confirmed_trips),
-        "client_departures": len(set(trip.get("trip_id", "") for trip in confirmed_trips))
+        "total_trips": len(enriched_trips),
+        "gross_revenue": sum(trip.get("gross_amount", 0) for trip in enriched_trips),
+        "total_discounts": sum(trip.get("discount", 0) for trip in enriched_trips),
+        "supplier_commissions": sum(trip.get("supplier_commission", 0) for trip in enriched_trips),
+        "agent_commissions": sum(trip.get("agent_commission", 0) for trip in enriched_trips),
+        "net_revenue": sum(trip.get("net_amount", 0) for trip in enriched_trips),
+        "client_departures": len(set(trip.get("trip_id", "") for trip in enriched_trips))
     }
     
     return {
@@ -1373,7 +1373,7 @@ async def get_financial_reports(
         },
         "totals": totals,
         "monthly_breakdown": monthly_data,
-        "detailed_trips": parsed_trips,
+        "detailed_trips": enriched_trips,
         "can_export_excel": current_user["role"] == "admin"  # Only admin can export to Excel
     }
 
