@@ -711,6 +711,63 @@ const TripView = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Status Change Dialog */}
+        <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Cambia Stato Viaggio</DialogTitle>
+              <DialogDescription>
+                Seleziona il nuovo stato per questo viaggio. 
+                {trip.status === 'draft' && ' Puoi confermare il viaggio per renderlo ufficiale.'}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="status">Nuovo Stato</Label>
+                <Select value={newStatus} onValueChange={setNewStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona stato" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">Draft (Bozza)</SelectItem>
+                    <SelectItem value="active">Active (Attivo)</SelectItem>
+                    <SelectItem value="confirmed">Confirmed (Confermato)</SelectItem>
+                    <SelectItem value="completed">Completed (Completato)</SelectItem>
+                    <SelectItem value="cancelled">Cancelled (Annullato)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {newStatus === 'confirmed' && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <p className="text-sm text-green-700">
+                    ✅ Confermando il viaggio, questo diventerà ufficiale e apparirà nei report finanziari.
+                  </p>
+                </div>
+              )}
+
+              {newStatus === 'cancelled' && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p className="text-sm text-red-700">
+                    ⚠️ Annullando il viaggio, questo non sarà più disponibile per i clienti.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowStatusDialog(false)}>
+                Annulla
+              </Button>
+              <Button onClick={handleStatusChange} disabled={!newStatus || newStatus === trip.status}>
+                <Settings className="w-4 h-4 mr-2" />
+                Aggiorna Stato
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
