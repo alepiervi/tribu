@@ -39,6 +39,7 @@ const TripView = () => {
   const [tripData, setTripData] = useState(null);
   const [itineraries, setItineraries] = useState([]);
   const [cruiseInfo, setCruiseInfo] = useState(null);
+  const [tripDetails, setTripDetails] = useState(null);
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingNote, setEditingNote] = useState(null);
@@ -47,6 +48,33 @@ const TripView = () => {
   const [showQuoteRequest, setShowQuoteRequest] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [newStatus, setNewStatus] = useState('');
+
+  // State for trip details form data
+  const [cruiseDetailsForm, setCruiseDetailsForm] = useState({
+    ship_name: '',
+    boarding_port: '',
+    cabin_number: '',
+    package_type: '',
+    insurance_type: '',
+    restaurant: '',
+    dinner_time: ''
+  });
+
+  const [resortDetailsForm, setResortDetailsForm] = useState({
+    resort_name: '',
+    room_type: '',
+    meal_plan: '',
+    package_formula: '',
+    insurance_type: ''
+  });
+
+  const [tourDetailsForm, setTourDetailsForm] = useState({
+    general_info: ''
+  });
+
+  const [customDetailsForm, setCustomDetailsForm] = useState({
+    custom_details: ''
+  });
 
   const [quoteRequest, setQuoteRequest] = useState({
     destination: '',
