@@ -151,27 +151,13 @@ const AdminDashboard = () => {
           <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-purple-100">
-                Viaggi Attivi
+                Viaggi Confermati
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center">
                 <TrendingUp className="h-8 w-8 text-purple-200 mr-3" />
-                <div className="text-2xl font-bold">{stats.active_trips || 0}</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-orange-100">
-                Foto Clienti
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center">
-                <Calendar className="h-8 w-8 text-orange-200 mr-3" />
-                <div className="text-2xl font-bold">{stats.total_photos || 0}</div>
+                <div className="text-2xl font-bold">{stats.confirmed_trips || 0}</div>
               </div>
             </CardContent>
           </Card>
