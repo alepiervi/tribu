@@ -227,7 +227,7 @@ const ItineraryManager = () => {
             
             <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
               <DialogTrigger asChild>
-                <Button className="flex items-center gap-2">
+                <Button className="flex items-center gap-2" onClick={openCreateDialog}>
                   <Plus className="w-4 h-4" />
                   Aggiungi Giornata
                 </Button>
