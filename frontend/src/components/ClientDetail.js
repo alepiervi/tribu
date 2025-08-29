@@ -67,13 +67,6 @@ const ClientDetail = () => {
     }).format(amount || 0);
   };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(amount || 0);
-  };
-
   const getStatusColor = (status) => {
     switch (status) {
       case 'active': return 'bg-green-100 text-green-800';
