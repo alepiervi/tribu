@@ -42,6 +42,35 @@ const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
+  // Configure axios interceptor to always include auth token
+  useEffect(() => {
+    // Add request interceptor to include token
+    const requestInterceptor = axios.interceptors.request.use((config) => {
+      const authToken = localStorage.getItem('token');
+      if (authToken) {
+        config.headers.Authorization = `Bearer ${authToken}`;
+      }
+      return config;
+    });
+
+    // Add response interceptor to handle auth errors
+    const responseInterceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401) {
+          console.error('401 Unauthorized - clearing auth state');
+          logout();
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      axios.interceptors.request.eject(requestInterceptor);
+      axios.interceptors.response.eject(responseInterceptor);
+    };
+  }, []);
+
   useEffect(() => {
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
