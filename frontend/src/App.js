@@ -72,13 +72,16 @@ const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    // Always check for stored token on app startup
+    const storedToken = localStorage.getItem('token');
+    if (storedToken) {
+      setToken(storedToken);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
       getCurrentUser();
     } else {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
   const getCurrentUser = async () => {
     try {
