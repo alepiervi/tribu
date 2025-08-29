@@ -178,6 +178,15 @@ const TripView = () => {
     setShowStatusDialog(true);
   };
 
+  const getGridColsClass = () => {
+    const totalTabs = tabsToShow.length + (user.role !== 'client' ? 2 : 0); // +2 for client-notes and trip-details
+    if (totalTabs <= 2) return 'grid-cols-2';
+    if (totalTabs <= 3) return 'grid-cols-3';
+    if (totalTabs <= 4) return 'grid-cols-4';
+    if (totalTabs <= 5) return 'grid-cols-5';
+    return 'grid-cols-6';
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'active': return 'bg-green-100 text-green-800';
