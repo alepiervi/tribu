@@ -93,6 +93,21 @@ const QuoteRequests = () => {
     }
   };
 
+  const handleDeleteRequest = async (requestId) => {
+    if (!window.confirm('Sei sicuro di voler eliminare questa richiesta preventivo?')) {
+      return;
+    }
+
+    try {
+      await axios.delete(`${API}/quote-requests/${requestId}`);
+      toast.success('Richiesta preventivo eliminata con successo');
+      fetchQuoteRequests();
+    } catch (error) {
+      console.error('Error deleting quote request:', error);
+      toast.error('Errore nell\'eliminazione della richiesta');
+    }
+  };
+
   const openResponseDialog = (request) => {
     setSelectedRequest(request);
     setResponse('');
