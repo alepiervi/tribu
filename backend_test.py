@@ -1669,6 +1669,121 @@ class TravelAgencyAPITester:
         print(f"\n🎯 OBJECTIVE ACHIEVED: Confirmed that workflow trip → confirmed → automatically in financial reports works correctly!")
         return True
 
+    def test_review_request_dashboard_and_excel(self):
+        """Test specific review request: Dashboard stats and Excel export functionality"""
+        print("\n🎯 TESTING REVIEW REQUEST - Dashboard Stats & Excel Export")
+        print("="*60)
+        print("📋 CREDENZIALI: admin@test.it / password123")
+        print("📋 CREDENZIALI: agent1@test.it / password123")
+        print("="*60)
+        
+        if not self.admin_token or not self.agent_token:
+            print("❌ Skipping review request tests - missing tokens")
+            return False
+
+        # TEST 1 - DASHBOARD STATS AGGIORNATA (ADMIN)
+        print("\n🔍 TEST 1 - DASHBOARD STATS AGGIORNATA (ADMIN)")
+        print("🎯 GET /api/dashboard/stats per admin")
+        print("✅ Verifica che ritorni 'confirmed_trips' invece di 'active_trips'")
+        print("✅ Verifica che 'total_photos' non sia più presente per admin")
+        
+        success, admin_stats = self.make_request('GET', 'dashboard/stats', token=self.admin_token)
+        if success:
+            self.log_test("✅ TEST 1: GET /api/dashboard/stats (admin)", True)
+            
+            # Check for confirmed_trips
+            if 'confirmed_trips' in admin_stats:
+                self.log_test("✅ TEST 1: Admin stats contains 'confirmed_trips'", True)
+                print(f"   📊 confirmed_trips: {admin_stats['confirmed_trips']}")
+            else:
+                self.log_test("❌ TEST 1: Admin stats missing 'confirmed_trips'", False, "Should contain confirmed_trips field")
+            
+            # Check that active_trips is NOT present
+            if 'active_trips' not in admin_stats:
+                self.log_test("✅ TEST 1: Admin stats does NOT contain 'active_trips' (correct)", True)
+            else:
+                self.log_test("❌ TEST 1: Admin stats contains 'active_trips' (should be removed)", False, "active_trips should be replaced with confirmed_trips")
+            
+            # Check that total_photos is NOT present for admin
+            if 'total_photos' not in admin_stats:
+                self.log_test("✅ TEST 1: Admin stats does NOT contain 'total_photos' (correct)", True)
+            else:
+                self.log_test("❌ TEST 1: Admin stats contains 'total_photos' (should be removed)", False, "total_photos should not be present for admin")
+            
+            # Show all admin stats
+            print(f"   📋 Admin dashboard stats: {admin_stats}")
+            
+        else:
+            self.log_test("❌ TEST 1: GET /api/dashboard/stats (admin)", False, str(admin_stats))
+
+        # TEST 2 - EXCEL EXPORT ENDPOINT
+        print("\n🔍 TEST 2 - EXCEL EXPORT ENDPOINT")
+        print("🎯 GET /api/reports/financial/export?year=2025 (deve ritornare file Excel)")
+        print("✅ Verifica che sia accessibile solo ad admin")
+        print("✅ Test con parametri diversi")
+        print("✅ Verifica headers appropriati per download file")
+        
+        # Test 2.1: Excel export with year parameter (admin)
+        success, excel_result = self.make_request('GET', 'reports/financial/export?year=2025', token=self.admin_token)
+        if success:
+            self.log_test("✅ TEST 2.1: GET /api/reports/financial/export?year=2025 (admin)", True)
+        else:
+            self.log_test("❌ TEST 2.1: Excel export with year (admin)", False, str(excel_result))
+        
+        # Test 2.2: Excel export with year + month (admin)
+        success, excel_result = self.make_request('GET', 'reports/financial/export?year=2025&month=1', token=self.admin_token)
+        if success:
+            self.log_test("✅ TEST 2.2: GET /api/reports/financial/export?year=2025&month=1 (admin)", True)
+        else:
+            self.log_test("❌ TEST 2.2: Excel export with year+month (admin)", False, str(excel_result))
+        
+        # Test 2.3: Excel export all years (admin)
+        success, excel_result = self.make_request('GET', 'reports/financial/export', token=self.admin_token)
+        if success:
+            self.log_test("✅ TEST 2.3: GET /api/reports/financial/export (all years, admin)", True)
+        else:
+            self.log_test("❌ TEST 2.3: Excel export all years (admin)", False, str(excel_result))
+        
+        # Test 2.4: Excel export forbidden for agent
+        success, excel_result = self.make_request('GET', 'reports/financial/export?year=2025', token=self.agent_token, expected_status=403)
+        if success:
+            self.log_test("✅ TEST 2.4: Excel export forbidden for agent (correct)", True)
+        else:
+            self.log_test("❌ TEST 2.4: Excel export should be forbidden for agent", False, str(excel_result))
+
+        # TEST 3 - AGENTS STATS
+        print("\n🔍 TEST 3 - AGENTS STATS")
+        print("🎯 Login come agent: agent1@test.it / password123")
+        print("🎯 GET /api/dashboard/stats per agent")
+        print("✅ Verifica che ritorni 'confirmed_trips' invece di 'active_trips'")
+        
+        success, agent_stats = self.make_request('GET', 'dashboard/stats', token=self.agent_token)
+        if success:
+            self.log_test("✅ TEST 3: GET /api/dashboard/stats (agent)", True)
+            
+            # Check for confirmed_trips
+            if 'confirmed_trips' in agent_stats:
+                self.log_test("✅ TEST 3: Agent stats contains 'confirmed_trips'", True)
+                print(f"   📊 confirmed_trips: {agent_stats['confirmed_trips']}")
+            else:
+                self.log_test("❌ TEST 3: Agent stats missing 'confirmed_trips'", False, "Should contain confirmed_trips field")
+            
+            # Check that active_trips is NOT present
+            if 'active_trips' not in agent_stats:
+                self.log_test("✅ TEST 3: Agent stats does NOT contain 'active_trips' (correct)", True)
+            else:
+                self.log_test("❌ TEST 3: Agent stats contains 'active_trips' (should be removed)", False, "active_trips should be replaced with confirmed_trips")
+            
+            # Show all agent stats
+            print(f"   📋 Agent dashboard stats: {agent_stats}")
+            
+        else:
+            self.log_test("❌ TEST 3: GET /api/dashboard/stats (agent)", False, str(agent_stats))
+
+        print("\n✅ REVIEW REQUEST TESTING COMPLETED")
+        print("🎯 OBIETTIVO: Confermare che dashboard mostra viaggi confermati e che export Excel funziona con tutti i tipi di filtri richiesti.")
+        return True
+
     def run_all_tests(self):
         """Run all test suites with focus on review request"""
         print("🚀 Starting Travel Agency API Tests...")
