@@ -414,10 +414,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Rapid verification of 3 corrected problems completed successfully"
+    - "New client details endpoints testing completed successfully"
   stuck_tasks: []
   test_all: false
-  test_priority: "rapid_verification_completed"
+  test_priority: "client_details_endpoints_completed"
 
 agent_communication:
     -agent: "main"
