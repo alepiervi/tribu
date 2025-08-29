@@ -19,8 +19,7 @@ import {
   CheckCircle,
   Clock,
   X,
-  Plus,
-  Trash2
+  Plus
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
