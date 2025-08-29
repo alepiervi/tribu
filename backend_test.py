@@ -2274,8 +2274,14 @@ def main():
     """Main test execution"""
     import sys
     
+    # Check if we should run only the trip details test
+    if len(sys.argv) > 1 and sys.argv[1] == "trip-details":
+        print("🎯 Running TRIP DETAILS ENDPOINTS test only...")
+        tester = TravelAgencyAPITester()
+        result = tester.run_trip_details_test()
+        return 0 if result else 1
     # Check if we should run only the review request test
-    if len(sys.argv) > 1 and sys.argv[1] == "review-request":
+    elif len(sys.argv) > 1 and sys.argv[1] == "review-request":
         print("🎯 Running REVIEW REQUEST test only...")
         tester = TravelAgencyAPITester()
         result = tester.run_review_request_test()
