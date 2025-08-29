@@ -119,6 +119,9 @@ backend:
         -working: true
         -agent: "testing"
         -comment: "API esistenti funzionano correttamente - problema nel frontend"
+        -working: true
+        -agent: "testing"
+        -comment: "FOCUSED TEST COMPLETATO: POST /api/itineraries funziona perfettamente. Creazione nuove giornate itinerario completamente operativa, tutti i tipi supportati (port_day, sea_day, resort_day, tour_day, free_day). Update e retrieve funzionanti. 12/12 test specifici passati."
 
   - task: "Report finanziari completi"
     implemented: true
