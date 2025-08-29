@@ -1006,6 +1006,9 @@ class TravelAgencyAPITester:
         self.test_trip_status_management()
         self.test_client_notes_visibility()
         self.test_quote_requests()
+        
+        # PRIORITY: Test NEW client details endpoints (REVIEW REQUEST)
+        self.test_new_client_details_endpoints()
 
         return True
 
