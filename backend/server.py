@@ -658,6 +658,17 @@ async def update_itinerary(itinerary_id: str, itinerary_data: ItineraryCreate, c
     
     return Itinerary(**parse_from_mongo(updated_itinerary))
 
+@api_router.delete("/itineraries/{itinerary_id}")
+async def delete_itinerary(itinerary_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized to delete itineraries")
+    
+    result = await db.itineraries.delete_one({"id": itinerary_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Itinerary not found")
+    
+    return {"message": "Itinerary deleted successfully"}
+
 # Cruise specific endpoints
 @api_router.post("/trips/{trip_id}/cruise-info", response_model=CruiseInfo)
 async def create_cruise_info(trip_id: str, cruise_data: CruiseInfoCreate, current_user: dict = Depends(get_current_user)):
