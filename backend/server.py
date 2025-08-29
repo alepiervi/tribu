@@ -1614,6 +1614,86 @@ async def get_client_financial_summary(client_id: str, current_user: dict = Depe
         }
     }
 
+# Cleanup endpoint for orphaned data
+@api_router.post("/admin/cleanup-orphaned-data")
+async def cleanup_orphaned_data(current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can cleanup orphaned data")
+    
+    print("🧹 Starting cleanup of orphaned data...")
+    
+    # Get all existing trip IDs
+    existing_trips = await db.trips.find({}, {"id": 1}).to_list(10000)
+    existing_trip_ids = set(trip["id"] for trip in existing_trips)
+    print(f"   📊 Found {len(existing_trip_ids)} existing trips")
+    
+    cleanup_results = {}
+    
+    # Clean orphaned trip_admin records
+    all_admin_records = await db.trip_admin.find({}).to_list(10000)
+    orphaned_admin = [record for record in all_admin_records if record.get("trip_id") not in existing_trip_ids]
+    if orphaned_admin:
+        orphaned_admin_ids = [record["trip_id"] for record in orphaned_admin]
+        admin_result = await db.trip_admin.delete_many({"trip_id": {"$in": orphaned_admin_ids}})
+        cleanup_results["trip_admin"] = admin_result.deleted_count
+        print(f"   🗑️ Deleted {admin_result.deleted_count} orphaned financial records")
+    else:
+        cleanup_results["trip_admin"] = 0
+    
+    # Clean orphaned itineraries
+    all_itineraries = await db.itineraries.find({}).to_list(10000)
+    orphaned_itineraries = [record for record in all_itineraries if record.get("trip_id") not in existing_trip_ids]
+    if orphaned_itineraries:
+        orphaned_itinerary_ids = [record["trip_id"] for record in orphaned_itineraries]
+        itinerary_result = await db.itineraries.delete_many({"trip_id": {"$in": orphaned_itinerary_ids}})
+        cleanup_results["itineraries"] = itinerary_result.deleted_count
+        print(f"   🗑️ Deleted {itinerary_result.deleted_count} orphaned itinerary records")
+    else:
+        cleanup_results["itineraries"] = 0
+    
+    # Clean orphaned cruise_info
+    all_cruise_info = await db.cruise_info.find({}).to_list(10000)
+    orphaned_cruise = [record for record in all_cruise_info if record.get("trip_id") not in existing_trip_ids]
+    if orphaned_cruise:
+        orphaned_cruise_ids = [record["trip_id"] for record in orphaned_cruise]
+        cruise_result = await db.cruise_info.delete_many({"trip_id": {"$in": orphaned_cruise_ids}})
+        cleanup_results["cruise_info"] = cruise_result.deleted_count
+        print(f"   🗑️ Deleted {cruise_result.deleted_count} orphaned cruise info records")
+    else:
+        cleanup_results["cruise_info"] = 0
+    
+    # Clean orphaned client_notes
+    all_notes = await db.client_notes.find({}).to_list(10000)
+    orphaned_notes = [record for record in all_notes if record.get("trip_id") not in existing_trip_ids]
+    if orphaned_notes:
+        orphaned_note_ids = [record["trip_id"] for record in orphaned_notes]
+        notes_result = await db.client_notes.delete_many({"trip_id": {"$in": orphaned_note_ids}})
+        cleanup_results["client_notes"] = notes_result.deleted_count
+        print(f"   🗑️ Deleted {notes_result.deleted_count} orphaned client notes")
+    else:
+        cleanup_results["client_notes"] = 0
+    
+    # Clean orphaned client_photos
+    all_photos = await db.client_photos.find({}).to_list(10000)
+    orphaned_photos = [record for record in all_photos if record.get("trip_id") not in existing_trip_ids]
+    if orphaned_photos:
+        orphaned_photo_ids = [record["trip_id"] for record in orphaned_photos]
+        photos_result = await db.client_photos.delete_many({"trip_id": {"$in": orphaned_photo_ids}})
+        cleanup_results["client_photos"] = photos_result.deleted_count
+        print(f"   🗑️ Deleted {photos_result.deleted_count} orphaned client photos")
+    else:
+        cleanup_results["client_photos"] = 0
+    
+    total_deleted = sum(cleanup_results.values())
+    print(f"🎯 Cleanup completed! Total deleted: {total_deleted} records")
+    
+    return {
+        "message": "Orphaned data cleanup completed",
+        "total_deleted": total_deleted,
+        "details": cleanup_results,
+        "remaining_trips": len(existing_trip_ids)
+    }
+
 # User Management - Block/Unblock and Delete functionality
 @api_router.post("/users/{user_id}/block")
 async def block_user(user_id: str, current_user: dict = Depends(get_current_user)):
