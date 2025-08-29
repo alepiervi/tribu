@@ -179,6 +179,9 @@ backend:
         -working: true
         -agent: "testing"
         -comment: "CRUD schede finanziarie completamente funzionale"
+        -working: true
+        -agent: "testing"
+        -comment: "FOCUSED TEST COMPLETATO: POST /api/financial-sheets funziona perfettamente. Creazione dati amministrativi completamente operativa, CRUD completo funzionante. Supporta schede comprehensive, minimali, agent-specific. Update e retrieve funzionanti. 8/8 test critici passati, 1 problema minore (validazione dati vuoti)."
 
   - task: "Stato viaggi oltre draft"
     implemented: true
