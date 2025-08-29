@@ -418,10 +418,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Orphaned data cleanup testing completed successfully"
+    - "Payment registration functionality testing"
   stuck_tasks: []
   test_all: false
-  test_priority: "orphaned_data_cleanup_completed"
+  test_priority: "payment_registration_testing"
 
 agent_communication:
     -agent: "main"
