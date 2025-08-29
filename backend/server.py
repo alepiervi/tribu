@@ -342,67 +342,6 @@ class PaymentInstallmentCreate(BaseModel):
     payment_type: str = "installment"
     notes: str = ""
 
-# Trip Details Models
-class CruiseDetails(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    trip_id: str
-    ship_name: str = ""
-    boarding_port: str = ""
-    cabin_number: str = ""
-    package_type: str = ""
-    insurance_type: str = ""
-    restaurant: str = ""
-    dinner_time: str = ""
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-class CruiseDetailsUpdate(BaseModel):
-    ship_name: Optional[str] = None
-    boarding_port: Optional[str] = None
-    cabin_number: Optional[str] = None
-    package_type: Optional[str] = None
-    insurance_type: Optional[str] = None
-    restaurant: Optional[str] = None
-    dinner_time: Optional[str] = None
-
-class ResortDetails(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    trip_id: str
-    resort_name: str = ""
-    room_type: str = ""
-    meal_plan: str = ""
-    package_formula: str = ""
-    insurance_type: str = ""
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-class ResortDetailsUpdate(BaseModel):
-    resort_name: Optional[str] = None
-    room_type: Optional[str] = None
-    meal_plan: Optional[str] = None
-    package_formula: Optional[str] = None
-    insurance_type: Optional[str] = None
-
-class TourDetails(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    trip_id: str
-    general_info: str = ""
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-class TourDetailsUpdate(BaseModel):
-    general_info: Optional[str] = None
-
-class CustomTripDetails(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    trip_id: str
-    custom_details: str = ""
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-class CustomTripDetailsUpdate(BaseModel):
-    custom_details: Optional[str] = None
-
 # Utility functions
 def create_token(user_data: dict) -> str:
     payload = {
