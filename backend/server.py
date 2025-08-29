@@ -1479,6 +1479,99 @@ async def update_quote_request(
     await db.quote_requests.update_one({"id": request_id}, {"$set": update_dict})
     return {"message": "Quote request updated successfully"}
 
+# Client Details and Financial Summary
+@api_router.get("/clients/{client_id}/details")
+async def get_client_details(client_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Get client info
+    client = await db.users.find_one({"id": client_id, "role": "client"})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Get client's trips
+    client_trips = await db.trips.find({"client_id": client_id}).to_list(1000)
+    
+    # Get financial data for each trip
+    trips_with_financials = []
+    for trip in client_trips:
+        # Get trip admin data (financial details)
+        trip_admin = await db.trip_admin.find_one({"trip_id": trip["id"]})
+        
+        trip_data = parse_from_mongo(trip)
+        if trip_admin:
+            trip_data["financial"] = parse_from_mongo(trip_admin)
+        else:
+            trip_data["financial"] = None
+            
+        trips_with_financials.append(trip_data)
+    
+    return {
+        "client": parse_from_mongo(client),
+        "trips": trips_with_financials
+    }
+
+@api_router.get("/clients/{client_id}/financial-summary")
+async def get_client_financial_summary(client_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Get all confirmed trips for this client
+    client_trips = await db.trips.find({"client_id": client_id}).to_list(1000)
+    trip_ids = [trip["id"] for trip in client_trips]
+    
+    # Get confirmed financial data
+    confirmed_financials = await db.trip_admin.find({
+        "trip_id": {"$in": trip_ids}, 
+        "status": "confirmed"
+    }).to_list(1000)
+    
+    # Calculate totals
+    total_gross_amount = sum(f.get("gross_amount", 0) for f in confirmed_financials)
+    total_net_amount = sum(f.get("net_amount", 0) for f in confirmed_financials)
+    total_discounts = sum(f.get("discount", 0) for f in confirmed_financials)
+    total_supplier_commission = sum(f.get("supplier_commission", 0) for f in confirmed_financials)
+    total_agent_commission = sum(f.get("agent_commission", 0) for f in confirmed_financials)
+    total_confirmations = len(confirmed_financials)
+    
+    # Get pending trips (those with admin data but not confirmed)
+    pending_financials = await db.trip_admin.find({
+        "trip_id": {"$in": trip_ids}, 
+        "status": {"$ne": "confirmed"}
+    }).to_list(1000)
+    
+    pending_gross_amount = sum(f.get("gross_amount", 0) for f in pending_financials)
+    pending_count = len(pending_financials)
+    
+    # Get trips without financial data
+    trips_with_admin = set()
+    for f in confirmed_financials + pending_financials:
+        trips_with_admin.add(f.get("trip_id"))
+    
+    trips_without_financial = len([t for t in client_trips if t["id"] not in trips_with_admin])
+    
+    return {
+        "client_id": client_id,
+        "confirmed_bookings": {
+            "count": total_confirmations,
+            "total_gross_amount": total_gross_amount,
+            "total_net_amount": total_net_amount,
+            "total_discounts": total_discounts,
+            "total_supplier_commission": total_supplier_commission,
+            "total_agent_commission": total_agent_commission
+        },
+        "pending_bookings": {
+            "count": pending_count,
+            "pending_gross_amount": pending_gross_amount
+        },
+        "stats": {
+            "total_trips": len(client_trips),
+            "trips_without_financial_data": trips_without_financial,
+            "average_trip_value": total_gross_amount / total_confirmations if total_confirmations > 0 else 0
+        }
+    }
+
 # User Management - Block/Unblock and Delete functionality
 @api_router.post("/users/{user_id}/block")
 async def block_user(user_id: str, current_user: dict = Depends(get_current_user)):
