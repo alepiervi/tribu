@@ -173,11 +173,11 @@ backend:
 
   - task: "Stato viaggi oltre draft"
     implemented: true
-    working: "needs_testing"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         -working: false
         -agent: "user"
@@ -185,6 +185,9 @@ backend:
         -working: "needs_testing"
         -agent: "main"
         -comment: "Aggiunto endpoint /trips/{trip_id}/status per gestire cambio stati viaggi con validazione"
+        -working: true
+        -agent: "testing"
+        -comment: "✅ TESTATO COMPLETAMENTE: Endpoint /api/trips/{trip_id}/status funziona perfettamente. Viaggi iniziano correttamente in stato 'draft' e possono essere cambiati in 'active', 'completed', 'cancelled'. Tutte le transizioni di stato testate con successo."
 
   - task: "API modifica note clienti"
     implemented: true
