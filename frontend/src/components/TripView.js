@@ -915,10 +915,14 @@ const TripView = () => {
                             <Textarea 
                               placeholder="Inserisci tutti i dettagli specifici per questo viaggio personalizzato..."
                               rows={4}
+                              value={customDetailsForm.custom_details}
+                              onChange={(e) => setCustomDetailsForm({...customDetailsForm, custom_details: e.target.value})}
                             />
                           </div>
                         </div>
-                        <Button className="mt-4">Salva Informazioni</Button>
+                        <Button className="mt-4" onClick={handleSaveCustomDetails}>
+                          Salva Informazioni
+                        </Button>
                       </div>
                     )}
                   </div>
