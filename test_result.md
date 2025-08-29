@@ -279,6 +279,24 @@ backend:
         -agent: "testing"
         -comment: "🚢 API TRIP DETAILS TESTATO - TUTTI I 5 ENDPOINT FUNZIONANTI: Testati con successo GET /api/trips/{trip_id}/details e POST per cruise/resort/tour/custom details con credenziali admin@test.it/password123 e trip_id c48cbf70-214b-492d-b295-838d7c8dad89. ✅ GET details rileva trip_type e struttura corretta ✅ POST cruise-details con dati completi funziona (ship_name, boarding_port, cabin_number, package_type, insurance_type, restaurant, dinner_time) ✅ UPDATE functionality testata con successo (POST con dati modificati) ✅ Autorizzazioni corrette (admin/agent OK, client bloccato 403) ✅ Validazione trip_id invalid gestita (404) ✅ Sistema create/update seamless con timestamps. RISULTATO: 23/25 test passati (92% success rate). ENDPOINT PRONTI PER INTEGRAZIONE FRONTEND."
 
+  - task: "Nuove funzionalità richieste (campo cellulare, cancella preventivi, filtro agente)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        -working: "NA"
+        -agent: "main"
+        -comment: "Implementazione 3 nuove funzionalità: 1) Campo cellulare nell'anagrafica cliente 2) Tasto cancella per ogni preventivo 3) Preventivi filtrati per agente che ha creato il cliente"
+        -working: "needs_testing"
+        -agent: "main" 
+        -comment: "IMPLEMENTAZIONE COMPLETATA: 1) Aggiunto campo 'phone' ai modelli User/UserCreate/UserUpdate 2) Implementato DELETE /api/quote-requests/{id} con autorizzazioni 3) Modificato GET /api/quote-requests per filtrare per agente con enriched data (client_name, client_email, client_phone) 4) Aggiornato frontend QuoteRequests.js con pulsante cancella e UserManagement.js con campo cellulare. PRONTO PER TEST BACKEND."
+        -working: true
+        -agent: "testing"
+        -comment: "🆕 NUOVE FUNZIONALITÀ TESTATE COMPLETAMENTE: Testati tutti e 3 i requisiti con credenziali admin@test.it/password123 e agent1@test.it/password123. ✅ CAMPO CELLULARE: Utente creato con phone '+39 123 456 7890', salvato e recuperato correttamente ✅ DELETE QUOTE REQUESTS: Endpoint DELETE /api/quote-requests/{id} funziona perfettamente con autorizzazioni (admin elimina tutti, client solo i propri, agent quelli dei propri clienti) ✅ FILTRO AGENTE: Agent vede solo 1 preventivo (dei propri clienti), admin vede tutti gli 11 preventivi ✅ ENRICHED DATA: Tutti i preventivi includono client_name, client_email, client_phone nei response. RISULTATO: 33/33 test passati (100% success rate). TUTTE LE NUOVE FUNZIONALITÀ IMPLEMENTATE E FUNZIONANTI COME RICHIESTO."
+
   - task: "Nuovi endpoint dettagli cliente"
     implemented: true
     working: true
