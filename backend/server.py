@@ -84,7 +84,6 @@ class User(BaseModel):
     email: EmailStr
     first_name: str
     last_name: str
-    phone: str = ""  # Campo cellulare
     role: UserRole
     blocked: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -94,13 +93,11 @@ class UserCreate(BaseModel):
     password: str
     first_name: str
     last_name: str
-    phone: str = ""  # Campo cellulare
     role: UserRole = UserRole.CLIENT
 
 class UserUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
-    phone: Optional[str] = None  # Campo cellulare
     email: Optional[EmailStr] = None
     blocked: Optional[bool] = None
 
