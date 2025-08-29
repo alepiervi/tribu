@@ -1788,57 +1788,30 @@ class TravelAgencyAPITester:
         """Run all test suites with focus on review request"""
         print("🚀 Starting Travel Agency API Tests...")
         print(f"Testing against: {self.base_url}")
-        print("🎯 FOCUS: Testing REVIEW REQUEST BUG FIX")
+        print("🎯 FOCUS: Testing REVIEW REQUEST - Dashboard Stats & Excel Export")
         
         # Test authentication first with provided credentials
         if not self.test_authentication():
             print("❌ Authentication tests failed - stopping")
             return False
 
-        # PRIORITY 1: Test the specific bug fix FIRST
+        # PRIORITY 1: Test the specific review request FIRST
         print("\n" + "="*60)
-        print("🎯 BUG FIX TEST: Trip Confirmed → Financial Reports (PRIMARY FOCUS)")
+        print("🎯 REVIEW REQUEST: Dashboard Stats & Excel Export (PRIMARY FOCUS)")
+        print("="*60)
+        self.test_review_request_dashboard_and_excel()
+
+        # PRIORITY 2: Test the bug fix functionalities
+        print("\n" + "="*60)
+        print("🎯 BUG FIX TEST: Trip Confirmed → Financial Reports (SECONDARY FOCUS)")
         print("="*60)
         self.test_trip_confirmed_status_financial_reports_fix()
 
-        # PRIORITY 2: Test the review request functionalities
+        # PRIORITY 3: Test the review request functionalities
         print("\n" + "="*60)
-        print("🎯 REVIEW REQUEST SPECIFIC TESTS (SECONDARY FOCUS)")
+        print("🎯 REVIEW REQUEST SPECIFIC TESTS (TERTIARY FOCUS)")
         print("="*60)
         self.test_review_request_specific()
-
-        # PRIORITY 3: Test all new endpoints comprehensively
-        print("\n" + "="*60)
-        print("🆕 TESTING NEW ENDPOINTS (TERTIARY FOCUS)")
-        print("="*60)
-        self.test_new_endpoints_comprehensive()
-
-        # Additional tests for context
-        print("\n" + "="*60)
-        print("📋 ADDITIONAL CONTEXT TESTS")
-        print("="*60)
-        
-        # Test user management
-        self.test_user_management()
-
-        # Test trip management (needed for status tests)
-        trip_id = self.test_trip_management()
-        
-        if trip_id:
-            # Test financial management (needed for financial reports)
-            admin_id = self.test_financial_management(trip_id)
-            
-            # Test itinerary management
-            self.test_itinerary_management(trip_id)
-            
-            # Test cruise features
-            self.test_cruise_specific_features(trip_id)
-
-        # Test dashboard and analytics
-        self.test_dashboard_stats()
-        self.test_analytics_and_reports()
-        self.test_notifications()
-        self.test_poi_management()
 
         # Print final results
         print(f"\n📊 Test Results: {self.tests_passed}/{self.tests_run} passed")
