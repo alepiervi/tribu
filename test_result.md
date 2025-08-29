@@ -414,12 +414,12 @@ frontend:
 
 metadata:
   created_by: "main_agent"
-  version: "1.9"
-  test_sequence: 9
+  version: "2.0"
+  test_sequence: 10
   run_ui: true
   backend_testing_completed: true
   backend_test_date: "2025-01-11"
-  backend_tests_passed: "91/94"
+  backend_tests_passed: "119/122"
   frontend_testing_completed: true
   frontend_test_date: "2025-01-11"
   frontend_tests_status: "5_critical_issues_found"
@@ -457,6 +457,12 @@ metadata:
   review_request_success_rate: "96.4%"
   review_request_test1_status: "manual_trip_status_change_working"
   review_request_test2_status: "financial_reports_with_names_working"
+  bug_fix_confirmed_status_tested: true
+  bug_fix_test_date: "2025-01-11"
+  bug_fix_test_status: "correzione_funziona_perfettamente"
+  bug_fix_tests_passed: "12/12"
+  bug_fix_success_rate: "100%"
+  bug_fix_objective_achieved: "workflow_viaggio_confirmed_report_finanziari_funzionante"
 
 test_plan:
   current_focus:
