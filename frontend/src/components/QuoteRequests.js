@@ -222,10 +222,31 @@ const QuoteRequests = () => {
                     <div className="space-y-4">
                       <div>
                         <h4 className="font-medium text-slate-800 mb-2">Dettagli Cliente</h4>
-                        <div className="space-y-1 text-sm">
-                          <div>Cliente ID: {request.client_id}</div>
-                          <div>Tipo viaggio: {request.trip_type}</div>
-                          <div>Contatto preferito: {request.contact_preference}</div>
+                        <div className="space-y-2 text-sm">
+                          {request.client_name && (
+                            <div className="flex items-center gap-2">
+                              <Users className="w-4 h-4 text-slate-500" />
+                              <span><strong>Nome:</strong> {request.client_name}</span>
+                            </div>
+                          )}
+                          {request.client_email && (
+                            <div className="flex items-center gap-2">
+                              <Mail className="w-4 h-4 text-slate-500" />
+                              <span><strong>Email:</strong> {request.client_email}</span>
+                            </div>
+                          )}
+                          {request.client_phone && (
+                            <div className="flex items-center gap-2">
+                              <Phone className="w-4 h-4 text-slate-500" />
+                              <span><strong>Cellulare:</strong> {request.client_phone}</span>
+                            </div>
+                          )}
+                          <div>
+                            <strong>Tipo viaggio:</strong> {request.trip_type}
+                          </div>
+                          <div>
+                            <strong>Contatto preferito:</strong> {request.contact_preference}
+                          </div>
                         </div>
                       </div>
                       
