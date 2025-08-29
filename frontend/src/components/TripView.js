@@ -4,21 +4,28 @@ import { useAuth } from '../App';
 import axios from 'axios';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 import { Badge } from "./ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { Textarea } from "./ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { 
   ArrowLeft, 
   Calendar, 
   MapPin, 
   User, 
   Plane,
-  Camera,
   FileText,
   Settings,
   Ship,
   Clock,
   Info,
-  Upload
+  Plus,
+  Edit,
+  Save,
+  X
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -31,9 +38,20 @@ const TripView = () => {
   const [tripData, setTripData] = useState(null);
   const [itineraries, setItineraries] = useState([]);
   const [cruiseInfo, setCruiseInfo] = useState(null);
-  const [photos, setPhotos] = useState([]);
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editingNote, setEditingNote] = useState(null);
+  const [newNote, setNewNote] = useState({ day_number: 1, note_text: '' });
+  const [showNewNoteDialog, setShowNewNoteDialog] = useState(false);
+  const [showQuoteRequest, setShowQuoteRequest] = useState(false);
+  const [quoteRequest, setQuoteRequest] = useState({
+    destination: '',
+    start_date: '',
+    end_date: '',
+    travelers: 2,
+    budget: '',
+    preferences: ''
+  });
 
   useEffect(() => {
     if (tripId) {
@@ -43,24 +61,76 @@ const TripView = () => {
 
   const fetchTripData = async () => {
     try {
-      const [tripRes, itinerariesRes, cruiseRes, photosRes, notesRes] = await Promise.all([
+      const requests = [
         axios.get(`${API}/trips/${tripId}/full`),
         axios.get(`${API}/trips/${tripId}/itineraries`),
-        axios.get(`${API}/trips/${tripId}/cruise-info`),
-        axios.get(`${API}/trips/${tripId}/photos`),
-        user.role === 'client' ? axios.get(`${API}/trips/${tripId}/notes`) : Promise.resolve({ data: [] })
-      ]);
+      ];
 
-      setTripData(tripRes.data);
-      setItineraries(itinerariesRes.data);
-      setCruiseInfo(cruiseRes.data);
-      setPhotos(photosRes.data);
-      setNotes(notesRes.data);
+      // Solo per crociere
+      if (user.role !== 'client') {
+        requests.push(axios.get(`${API}/trips/${tripId}/cruise-info`));
+      }
+
+      // Note solo per clienti
+      if (user.role === 'client') {
+        requests.push(axios.get(`${API}/trips/${tripId}/notes`));
+      }
+
+      const responses = await Promise.all(requests);
+      
+      setTripData(responses[0].data);
+      setItineraries(responses[1].data);
+      
+      if (user.role !== 'client' && responses[2]) {
+        setCruiseInfo(responses[2].data);
+      }
+      
+      if (user.role === 'client' && responses[responses.length - 1]) {
+        setNotes(responses[responses.length - 1].data);
+      }
     } catch (error) {
       console.error('Error fetching trip data:', error);
       toast.error('Errore nel caricamento del viaggio');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveNote = async (noteData) => {
+    try {
+      if (editingNote) {
+        await axios.put(`${API}/notes/${editingNote.id}?note_text=${encodeURIComponent(noteData.note_text)}`);
+        toast.success('Nota aggiornata con successo!');
+      } else {
+        await axios.post(`${API}/trips/${tripId}/notes`, noteData);
+        toast.success('Nota creata con successo!');
+      }
+      
+      setEditingNote(null);
+      setNewNote({ day_number: 1, note_text: '' });
+      setShowNewNoteDialog(false);
+      fetchTripData();
+    } catch (error) {
+      console.error('Error saving note:', error);
+      toast.error('Errore nel salvataggio della nota');
+    }
+  };
+
+  const handleQuoteRequest = async () => {
+    try {
+      // In un'implementazione reale, questo invierebbe una richiesta al backend
+      toast.success('Richiesta preventivo inviata! Ti contatteremo presto.');
+      setShowQuoteRequest(false);
+      setQuoteRequest({
+        destination: '',
+        start_date: '',
+        end_date: '',
+        travelers: 2,
+        budget: '',
+        preferences: ''
+      });
+    } catch (error) {
+      toast.error('Errore nell\'invio della richiesta');
     }
   };
 
@@ -81,29 +151,6 @@ const TripView = () => {
       case 'tour': return 'bg-purple-100 text-purple-800';
       case 'custom': return 'bg-orange-100 text-orange-800';
       default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const handlePhotoUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('caption', `Foto caricata il ${new Date().toLocaleDateString('it-IT')}`);
-    formData.append('photo_category', 'destination');
-
-    try {
-      await axios.post(`${API}/trips/${tripId}/photos`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-      toast.success('Foto caricata con successo!');
-      fetchTripData(); // Refresh data
-    } catch (error) {
-      console.error('Error uploading photo:', error);
-      toast.error('Errore nel caricamento della foto');
     }
   };
 
@@ -129,6 +176,20 @@ const TripView = () => {
   }
 
   const { trip, agent, client } = tripData;
+
+  // Determina quanti tab mostrare
+  const tabsToShow = [];
+  
+  tabsToShow.push('itinerary');
+  
+  if (trip.trip_type === 'cruise' && cruiseInfo) {
+    tabsToShow.push('cruise');
+  }
+  
+  if (user.role === 'client') {
+    tabsToShow.push('notes');
+    tabsToShow.push('quote');
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -157,12 +218,20 @@ const TripView = () => {
                 {trip.trip_type}
               </Badge>
               {user.role !== 'client' && (
-                <Link to={`/trip-admin/${tripId}`}>
-                  <Button variant="outline" size="sm" className="flex items-center gap-2">
-                    <Settings className="w-4 h-4" />
-                    Amministrazione
-                  </Button>
-                </Link>
+                <>
+                  <Link to={`/trip-admin/${tripId}`}>
+                    <Button variant="outline" size="sm" className="flex items-center gap-2">
+                      <Settings className="w-4 h-4" />
+                      Amministrazione
+                    </Button>
+                  </Link>
+                  <Link to={`/trips/${tripId}/itinerary`}>
+                    <Button variant="outline" size="sm" className="flex items-center gap-2">
+                      <Edit className="w-4 h-4" />
+                      Modifica Itinerario
+                    </Button>
+                  </Link>
+                </>
               )}
             </div>
           </div>
@@ -215,12 +284,12 @@ const TripView = () => {
                 </div>
               )}
 
-              {agent && (
+              {agent && user.role === 'client' && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 text-slate-600">
                     <User className="w-5 h-5" />
                     <div>
-                      <p className="font-medium">Agente</p>
+                      <p className="font-medium">Il tuo Agente</p>
                       <p className="text-sm">{agent.first_name} {agent.last_name}</p>
                       <p className="text-xs text-slate-500">{agent.email}</p>
                     </div>
@@ -237,26 +306,30 @@ const TripView = () => {
         </Card>
 
         {/* Tabs for different sections */}
-        <Tabs defaultValue="itinerary" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="itinerary" className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              Itinerario
-            </TabsTrigger>
-            {trip.trip_type === 'cruise' && (
+        <Tabs defaultValue={tabsToShow[0]} className="space-y-6">
+          <TabsList className={`grid w-full ${tabsToShow.length === 2 ? 'grid-cols-2' : tabsToShow.length === 3 ? 'grid-cols-3' : 'grid-cols-4'}`}>
+            {tabsToShow.includes('itinerary') && (
+              <TabsTrigger value="itinerary" className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Itinerario
+              </TabsTrigger>
+            )}
+            {tabsToShow.includes('cruise') && (
               <TabsTrigger value="cruise" className="flex items-center gap-2">
                 <Ship className="w-4 h-4" />
                 Crociera
               </TabsTrigger>
             )}
-            <TabsTrigger value="photos" className="flex items-center gap-2">
-              <Camera className="w-4 h-4" />
-              Foto ({photos.length})
-            </TabsTrigger>
-            {user.role === 'client' && (
+            {tabsToShow.includes('notes') && (
               <TabsTrigger value="notes" className="flex items-center gap-2">
                 <FileText className="w-4 h-4" />
                 Le Mie Note
+              </TabsTrigger>
+            )}
+            {tabsToShow.includes('quote') && (
+              <TabsTrigger value="quote" className="flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                Richiedi Preventivo
               </TabsTrigger>
             )}
           </TabsList>
@@ -302,7 +375,7 @@ const TripView = () => {
             </Card>
           </TabsContent>
 
-          {trip.trip_type === 'cruise' && cruiseInfo && (
+          {tabsToShow.includes('cruise') && cruiseInfo && (
             <TabsContent value="cruise">
               <Card>
                 <CardHeader>
@@ -356,74 +429,23 @@ const TripView = () => {
             </TabsContent>
           )}
 
-          <TabsContent value="photos">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <Camera className="w-5 h-5" />
-                    Foto del Viaggio
-                  </span>
-                  {user.role === 'client' && (
-                    <div>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handlePhotoUpload}
-                        className="hidden"
-                        id="photo-upload"
-                      />
-                      <label htmlFor="photo-upload">
-                        <Button size="sm" className="flex items-center gap-2 cursor-pointer">
-                          <Upload className="w-4 h-4" />
-                          Carica Foto
-                        </Button>
-                      </label>
-                    </div>
-                  )}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {photos.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {photos.map((photo) => (
-                      <div key={photo.id} className="border border-slate-200 rounded-lg overflow-hidden">
-                        <img 
-                          src={`${BACKEND_URL}${photo.url}`} 
-                          alt={photo.caption}
-                          className="w-full h-48 object-cover"
-                        />
-                        <div className="p-3">
-                          <p className="text-sm text-slate-600">{photo.caption}</p>
-                          <Badge variant="outline" className="mt-2">
-                            {photo.photo_category}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Camera className="mx-auto h-12 w-12 text-slate-400 mb-4" />
-                    <p className="text-slate-500">Nessuna foto ancora caricata</p>
-                    {user.role === 'client' && (
-                      <p className="text-xs text-slate-400 mt-2">
-                        Carica le tue foto per condividere i ricordi del viaggio
-                      </p>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {user.role === 'client' && (
+          {tabsToShow.includes('notes') && (
             <TabsContent value="notes">
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="w-5 h-5" />
-                    Le Mie Note Personali
+                  <CardTitle className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <FileText className="w-5 h-5" />
+                      Le Mie Note Personali
+                    </span>
+                    <Button 
+                      onClick={() => setShowNewNoteDialog(true)}
+                      size="sm" 
+                      className="flex items-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Aggiungi Nota
+                    </Button>
                   </CardTitle>
                   <CardDescription>
                     Scrivi qui i tuoi pensieri e ricordi del viaggio
@@ -434,27 +456,205 @@ const TripView = () => {
                     <div className="space-y-4">
                       {notes.map((note) => (
                         <div key={note.id} className="border border-slate-200 rounded-lg p-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge variant="outline">Giorno {note.day_number}</Badge>
-                            <span className="text-xs text-slate-500">
-                              {new Date(note.created_at).toLocaleDateString('it-IT')}
-                            </span>
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge variant="outline">Giorno {note.day_number}</Badge>
+                                <span className="text-xs text-slate-500">
+                                  {new Date(note.created_at).toLocaleDateString('it-IT')}
+                                </span>
+                              </div>
+                              <p className="text-slate-600">{note.note_text}</p>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => setEditingNote(note)}
+                              className="flex items-center gap-2"
+                            >
+                              <Edit className="w-4 h-4" />
+                              Modifica
+                            </Button>
                           </div>
-                          <p className="text-slate-600">{note.note_text}</p>
                         </div>
                       ))}
                     </div>
                   ) : (
                     <div className="text-center py-8">
                       <FileText className="mx-auto h-12 w-12 text-slate-400 mb-4" />
-                      <p className="text-slate-500">Nessuna nota ancora scritta</p>
+                      <p className="text-slate-500 mb-4">Nessuna nota ancora scritta</p>
+                      <Button onClick={() => setShowNewNoteDialog(true)}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Scrivi la tua prima nota
+                      </Button>
                     </div>
                   )}
                 </CardContent>
               </Card>
             </TabsContent>
           )}
+
+          {tabsToShow.includes('quote') && (
+            <TabsContent value="quote">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Plus className="w-5 h-5" />
+                    Richiedi Nuovo Preventivo
+                  </CardTitle>
+                  <CardDescription>
+                    Interessato a un altro viaggio? Richiedi un preventivo personalizzato
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="destination">Destinazione desiderata</Label>
+                        <Input
+                          id="destination"
+                          value={quoteRequest.destination}
+                          onChange={(e) => setQuoteRequest({...quoteRequest, destination: e.target.value})}
+                          placeholder="Es: Giappone, Maldive, New York..."
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label htmlFor="start_date">Data partenza</Label>
+                          <Input
+                            id="start_date"
+                            type="date"
+                            value={quoteRequest.start_date}
+                            onChange={(e) => setQuoteRequest({...quoteRequest, start_date: e.target.value})}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="end_date">Data ritorno</Label>
+                          <Input
+                            id="end_date"
+                            type="date"
+                            value={quoteRequest.end_date}
+                            onChange={(e) => setQuoteRequest({...quoteRequest, end_date: e.target.value})}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="travelers">Numero viaggiatori</Label>
+                        <Input
+                          id="travelers"
+                          type="number"
+                          min="1"
+                          value={quoteRequest.travelers}
+                          onChange={(e) => setQuoteRequest({...quoteRequest, travelers: e.target.value})}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="budget">Budget approssimativo (€)</Label>
+                        <Input
+                          id="budget"
+                          value={quoteRequest.budget}
+                          onChange={(e) => setQuoteRequest({...quoteRequest, budget: e.target.value})}
+                          placeholder="Es: 2000-3000"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="preferences">Preferenze e richieste speciali</Label>
+                        <Textarea
+                          id="preferences"
+                          value={quoteRequest.preferences}
+                          onChange={(e) => setQuoteRequest({...quoteRequest, preferences: e.target.value})}
+                          placeholder="Descrivi le tue preferenze: tipo di viaggio, hotel, attività..."
+                          rows={4}
+                        />
+                      </div>
+
+                      <Button 
+                        onClick={handleQuoteRequest}
+                        className="w-full"
+                        disabled={!quoteRequest.destination}
+                      >
+                        Invia Richiesta Preventivo
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
         </Tabs>
+
+        {/* Note Dialog */}
+        <Dialog open={showNewNoteDialog || !!editingNote} onOpenChange={() => {
+          setShowNewNoteDialog(false);
+          setEditingNote(null);
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {editingNote ? 'Modifica Nota' : 'Nuova Nota'}
+              </DialogTitle>
+              <DialogDescription>
+                Scrivi i tuoi pensieri e ricordi del viaggio
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="day_number">Giorno del viaggio</Label>
+                <Input
+                  id="day_number"
+                  type="number"
+                  min="1"
+                  value={editingNote ? editingNote.day_number : newNote.day_number}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value);
+                    if (editingNote) {
+                      setEditingNote({...editingNote, day_number: value});
+                    } else {
+                      setNewNote({...newNote, day_number: value});
+                    }
+                  }}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="note_text">Il tuo ricordo</Label>
+                <Textarea
+                  id="note_text"
+                  value={editingNote ? editingNote.note_text : newNote.note_text}
+                  onChange={(e) => {
+                    if (editingNote) {
+                      setEditingNote({...editingNote, note_text: e.target.value});
+                    } else {
+                      setNewNote({...newNote, note_text: e.target.value});
+                    }
+                  }}
+                  placeholder="Racconta la tua esperienza di oggi..."
+                  rows={4}
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                setShowNewNoteDialog(false);
+                setEditingNote(null);
+              }}>
+                Annulla
+              </Button>
+              <Button onClick={() => handleSaveNote(editingNote || newNote)}>
+                <Save className="w-4 h-4 mr-2" />
+                Salva Nota
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
