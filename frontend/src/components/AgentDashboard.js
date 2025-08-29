@@ -249,6 +249,19 @@ const AgentDashboard = () => {
                   </div>
                 </Button>
               </Link>
+
+              <Link to="/quote-requests">
+                <Button
+                  className="flex items-center gap-3 h-auto p-4 w-full bg-teal-50 text-teal-700 border border-teal-200 hover:bg-teal-100"
+                  variant="outline"
+                >
+                  <MessageSquare className="w-5 h-5" />
+                  <div className="text-left">
+                    <div className="font-medium">Richieste Preventivo</div>
+                    <div className="text-sm text-teal-600">Richieste dai clienti</div>
+                  </div>
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>
