@@ -99,10 +99,18 @@ const TripView = () => {
   const handleSaveNote = async (noteData) => {
     try {
       if (editingNote) {
-        await axios.put(`${API}/notes/${editingNote.id}?note_text=${encodeURIComponent(noteData.note_text)}`);
+        // Update existing note
+        await axios.put(`${API}/notes/${editingNote.id}`, { 
+          note_text: noteData.note_text 
+        });
         toast.success('Nota aggiornata con successo!');
       } else {
-        await axios.post(`${API}/trips/${tripId}/notes`, noteData);
+        // Create new note
+        await axios.post(`${API}/trips/${tripId}/notes`, {
+          day_number: noteData.day_number,
+          note_text: noteData.note_text,
+          trip_id: tripId
+        });
         toast.success('Nota creata con successo!');
       }
       
