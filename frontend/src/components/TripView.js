@@ -572,6 +572,191 @@ const TripView = () => {
             </TabsContent>
           )}
 
+          {/* Client Notes Tab - For Admin/Agent to see client notes */}
+          {user.role !== 'client' && (
+            <TabsContent value="client-notes">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquare className="w-5 h-5" />
+                    Note del Cliente
+                  </CardTitle>
+                  <CardDescription>
+                    Note e commenti inviati dal cliente per questo viaggio
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {notes && notes.length > 0 ? (
+                    <div className="space-y-4">
+                      {notes.map((note) => (
+                        <div key={note.id} className="border border-slate-200 rounded-lg p-4">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline">Giorno {note.day_number}</Badge>
+                              <span className="text-sm text-slate-500">
+                                {new Date(note.created_at).toLocaleDateString('it-IT')}
+                              </span>
+                            </div>
+                          </div>
+                          <p className="text-slate-700 bg-slate-50 p-3 rounded-lg">
+                            {note.note_text}
+                          </p>
+                          {note.updated_at && note.updated_at !== note.created_at && (
+                            <p className="text-xs text-slate-500 mt-2">
+                              Modificato il: {new Date(note.updated_at).toLocaleDateString('it-IT')}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <MessageSquare className="mx-auto h-12 w-12 text-slate-400 mb-4" />
+                      <h4 className="text-lg font-medium text-slate-800 mb-2">Nessuna nota dal cliente</h4>
+                      <p className="text-slate-500">
+                        Il cliente non ha ancora lasciato note per questo viaggio
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+
+          {/* Trip Details Tab - For Admin/Agent with specific travel info */}
+          {user.role !== 'client' && (
+            <TabsContent value="trip-details">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Info className="w-5 h-5" />
+                    Informazioni Dettagliate
+                  </CardTitle>
+                  <CardDescription>
+                    Dettagli specifici da fornire al cliente
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {/* Cruise Information */}
+                    {trip.trip_type === 'cruise' && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h4 className="font-semibold text-blue-800 mb-4 flex items-center gap-2">
+                          <Ship className="w-5 h-5" />
+                          Informazioni Crociera
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-blue-700 mb-1">Nome Nave</label>
+                            <Input placeholder="Es: MSC Seaside" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-blue-700 mb-1">Porto di Imbarco</label>
+                            <Input placeholder="Es: Civitavecchia" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-blue-700 mb-1">Numero Cabina</label>
+                            <Input placeholder="Es: 7145" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-blue-700 mb-1">Tipo Pacchetto</label>
+                            <Input placeholder="Es: Balcone Premium" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-blue-700 mb-1">Tipo Assicurazione</label>
+                            <Input placeholder="Es: Annullamento + Medica" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-blue-700 mb-1">Ristorante</label>
+                            <Input placeholder="Es: Ristorante Principale" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-blue-700 mb-1">Turno Cena</label>
+                            <Input placeholder="Es: Secondo turno - 21:00" />
+                          </div>
+                        </div>
+                        <Button className="mt-4">Salva Informazioni Crociera</Button>
+                      </div>
+                    )}
+
+                    {/* Resort Information */}
+                    {trip.trip_type === 'resort' && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <h4 className="font-semibold text-green-800 mb-4 flex items-center gap-2">
+                          <MapPin className="w-5 h-5" />
+                          Informazioni Resort
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-green-700 mb-1">Nome Resort</label>
+                            <Input placeholder="Es: Sandals Royal Caribbean" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-green-700 mb-1">Tipologia Camera</label>
+                            <Input placeholder="Es: Junior Suite Vista Mare" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-green-700 mb-1">Pasto Entrata</label>
+                            <Input placeholder="Es: All Inclusive" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-green-700 mb-1">Formula</label>
+                            <Input placeholder="Es: All Inclusive Premium" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-green-700 mb-1">Assicurazione</label>
+                            <Input placeholder="Es: Annullamento + Medica + Bagaglio" />
+                          </div>
+                        </div>
+                        <Button className="mt-4">Salva Informazioni Resort</Button>
+                      </div>
+                    )}
+
+                    {/* Tour Information */}
+                    {trip.trip_type === 'tour' && (
+                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                        <h4 className="font-semibold text-purple-800 mb-4 flex items-center gap-2">
+                          <Calendar className="w-5 h-5" />
+                          Informazioni Tour
+                        </h4>
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-purple-700 mb-1">Informazioni Generali</label>
+                            <Textarea 
+                              placeholder="Inserisci tutte le informazioni generali del tour: guida, trasporti, hotel, pasti inclusi, punti di interesse, documenti necessari, etc."
+                              rows={6}
+                            />
+                          </div>
+                        </div>
+                        <Button className="mt-4">Salva Informazioni Tour</Button>
+                      </div>
+                    )}
+
+                    {/* Custom trip or other types */}
+                    {(!trip.trip_type || trip.trip_type === 'custom') && (
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                          <Info className="w-5 h-5" />
+                          Informazioni Personalizzate
+                        </h4>
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Dettagli del Viaggio</label>
+                            <Textarea 
+                              placeholder="Inserisci tutti i dettagli specifici per questo viaggio personalizzato..."
+                              rows={4}
+                            />
+                          </div>
+                        </div>
+                        <Button className="mt-4">Salva Informazioni</Button>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+
           {tabsToShow.includes('quote') && (
             <TabsContent value="quote">
               <Card>
