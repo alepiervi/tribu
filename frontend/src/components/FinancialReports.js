@@ -512,6 +512,105 @@ const FinancialReports = () => {
           </Card>
         )}
       </main>
+
+      {/* Export Excel Dialog */}
+      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Esporta Report Excel</DialogTitle>
+            <DialogDescription>
+              Seleziona il tipo di report da esportare. Il file conterrà tutti i dati delle pratiche confermate.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Export Type Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="exportType">Tipo di Export</Label>
+              <Select value={exportType} onValueChange={setExportType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleziona tipo di export" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="year">Totale Anno</SelectItem>
+                  <SelectItem value="month">Totale Mese</SelectItem>
+                  <SelectItem value="all">Totale di tutti gli anni</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Year Selection (for year and month types) */}
+            {(exportType === 'year' || exportType === 'month') && (
+              <div className="space-y-2">
+                <Label htmlFor="exportYear">Anno</Label>
+                <Select value={exportYear.toString()} onValueChange={(value) => setExportYear(parseInt(value))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getCurrentYearRange().map(year => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Month Selection (only for month type) */}
+            {exportType === 'month' && (
+              <div className="space-y-2">
+                <Label htmlFor="exportMonth">Mese</Label>
+                <Select value={exportMonth} onValueChange={setExportMonth}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona mese" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getMonths().map(month => (
+                      <SelectItem key={month.value} value={month.value.toString()}>
+                        {month.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Data Preview */}
+            {exportType && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <h4 className="font-medium text-blue-800 mb-2">Dati inclusi nel file Excel:</h4>
+                <ul className="text-sm text-blue-700 space-y-1">
+                  <li>• Numero Pratica</li>
+                  <li>• Numero Prenotazione</li>
+                  <li>• Nome Cliente</li>
+                  <li>• Data conferma pratica</li>
+                  <li>• Data Partenza</li>
+                  <li>• Fatturato Lordo</li>
+                  <li>• Commissione Fornitore</li>
+                  <li>• Sconti applicati</li>
+                  <li>• Commissione Agente</li>
+                </ul>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowExportDialog(false)}>
+              Annulla
+            </Button>
+            <Button 
+              onClick={handleExportExcel} 
+              disabled={!exportType || (exportType === 'month' && !exportMonth)}
+              className="flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Esporta Excel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
