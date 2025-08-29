@@ -689,48 +689,26 @@ const TripView = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <label className="block text-sm font-medium text-green-700 mb-1">Nome Resort</label>
-                            <Input 
-                              placeholder="Es: Sandals Royal Caribbean" 
-                              value={resortDetailsForm.resort_name}
-                              onChange={(e) => setResortDetailsForm({...resortDetailsForm, resort_name: e.target.value})}
-                            />
+                            <Input placeholder="Es: Sandals Royal Caribbean" />
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-green-700 mb-1">Tipologia Camera</label>
-                            <Input 
-                              placeholder="Es: Junior Suite Vista Mare" 
-                              value={resortDetailsForm.room_type}
-                              onChange={(e) => setResortDetailsForm({...resortDetailsForm, room_type: e.target.value})}
-                            />
+                            <Input placeholder="Es: Junior Suite Vista Mare" />
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-green-700 mb-1">Pasto Entrata</label>
-                            <Input 
-                              placeholder="Es: All Inclusive" 
-                              value={resortDetailsForm.meal_plan}
-                              onChange={(e) => setResortDetailsForm({...resortDetailsForm, meal_plan: e.target.value})}
-                            />
+                            <Input placeholder="Es: All Inclusive" />
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-green-700 mb-1">Formula</label>
-                            <Input 
-                              placeholder="Es: All Inclusive Premium" 
-                              value={resortDetailsForm.package_formula}
-                              onChange={(e) => setResortDetailsForm({...resortDetailsForm, package_formula: e.target.value})}
-                            />
+                            <Input placeholder="Es: All Inclusive Premium" />
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-green-700 mb-1">Assicurazione</label>
-                            <Input 
-                              placeholder="Es: Annullamento + Medica + Bagaglio" 
-                              value={resortDetailsForm.insurance_type}
-                              onChange={(e) => setResortDetailsForm({...resortDetailsForm, insurance_type: e.target.value})}
-                            />
+                            <Input placeholder="Es: Annullamento + Medica + Bagaglio" />
                           </div>
                         </div>
-                        <Button className="mt-4" onClick={handleSaveResortDetails}>
-                          Salva Informazioni Resort
-                        </Button>
+                        <Button className="mt-4">Salva Informazioni Resort</Button>
                       </div>
                     )}
 
