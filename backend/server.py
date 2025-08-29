@@ -621,11 +621,53 @@ async def delete_trip(trip_id: str, current_user: dict = Depends(get_current_use
     if current_user["role"] not in ["admin", "agent"]:
         raise HTTPException(status_code=403, detail="Not authorized to delete trips")
     
-    result = await db.trips.delete_one({"id": trip_id})
-    if result.deleted_count == 0:
+    # Check if trip exists
+    trip = await db.trips.find_one({"id": trip_id})
+    if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
     
-    return {"message": "Trip deleted successfully"}
+    # If agent, check if they own this trip
+    if current_user["role"] == "agent" and trip["agent_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this trip")
+    
+    # Cascading delete: remove all related data
+    print(f"🗑️ Deleting trip {trip_id} and all related data...")
+    
+    # Delete financial/admin data
+    trip_admin_result = await db.trip_admin.delete_many({"trip_id": trip_id})
+    print(f"   📊 Deleted {trip_admin_result.deleted_count} financial records")
+    
+    # Delete itineraries
+    itinerary_result = await db.itineraries.delete_many({"trip_id": trip_id})
+    print(f"   📅 Deleted {itinerary_result.deleted_count} itinerary records")
+    
+    # Delete cruise info
+    cruise_result = await db.cruise_info.delete_many({"trip_id": trip_id})
+    print(f"   🚢 Deleted {cruise_result.deleted_count} cruise info records")
+    
+    # Delete client notes
+    notes_result = await db.client_notes.delete_many({"trip_id": trip_id})
+    print(f"   📝 Deleted {notes_result.deleted_count} client notes")
+    
+    # Delete client photos
+    photos_result = await db.client_photos.delete_many({"trip_id": trip_id})
+    print(f"   📷 Deleted {photos_result.deleted_count} client photos")
+    
+    # Finally delete the trip itself
+    result = await db.trips.delete_one({"id": trip_id})
+    print(f"   ✈️ Deleted trip: {result.deleted_count}")
+    
+    return {
+        "message": "Trip and all related data deleted successfully",
+        "deleted_counts": {
+            "trip": result.deleted_count,
+            "financial_records": trip_admin_result.deleted_count,
+            "itineraries": itinerary_result.deleted_count,
+            "cruise_info": cruise_result.deleted_count,
+            "client_notes": notes_result.deleted_count,
+            "client_photos": photos_result.deleted_count
+        }
+    }
 
 # Itinerary endpoints
 @api_router.get("/trips/{trip_id}/itineraries", response_model=List[Itinerary])
