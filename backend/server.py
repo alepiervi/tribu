@@ -799,10 +799,15 @@ async def get_trip_photos(
     photos = await db.client_photos.find(query).to_list(1000)
     return [ClientPhoto(**parse_from_mongo(photo)) for photo in photos]
 
-# Client notes endpoints
+# Client notes endpoints - Fixed for Admin/Agent visibility
 @api_router.get("/trips/{trip_id}/notes", response_model=List[ClientNote])
 async def get_client_notes(trip_id: str, current_user: dict = Depends(get_current_user)):
-    notes = await db.client_notes.find({"trip_id": trip_id, "client_id": current_user["id"]}).to_list(1000)
+    # Admin and agents can see all notes for a trip, clients see only their own
+    query = {"trip_id": trip_id}
+    if current_user["role"] == "client":
+        query["client_id"] = current_user["id"]
+    
+    notes = await db.client_notes.find(query).to_list(1000)
     return [ClientNote(**parse_from_mongo(note)) for note in notes]
 
 @api_router.post("/trips/{trip_id}/notes", response_model=ClientNote)
@@ -816,21 +821,58 @@ async def create_client_note(trip_id: str, note_data: ClientNoteCreate, current_
     await db.client_notes.insert_one(note_dict)
     return note
 
-@api_router.put("/notes/{note_id}", response_model=ClientNote)
-async def update_client_note(note_id: str, note_text: str, current_user: dict = Depends(get_current_user)):
-    note = await db.client_notes.find_one({"id": note_id, "client_id": current_user["id"]})
+@api_router.put("/notes/{note_id}")
+async def update_client_note(
+    note_id: str, 
+    note_data: dict, 
+    current_user: dict = Depends(get_current_user)
+):
+    # Find the note
+    note = await db.client_notes.find_one({"id": note_id})
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
     
+    # Authorization: client can edit their own notes, admin/agent can edit any
+    if current_user["role"] == "client":
+        if note["client_id"] != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Not authorized to edit this note")
+    elif current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
     update_data = {
-        "note_text": note_text,
-        "updated_at": datetime.now(timezone.utc).isoformat()
+        "note_text": note_data.get("note_text", note["note_text"]),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "updated_by": current_user["id"]
     }
     
     await db.client_notes.update_one({"id": note_id}, {"$set": update_data})
     updated_note = await db.client_notes.find_one({"id": note_id})
     
-    return ClientNote(**parse_from_mongo(updated_note))
+    return {"message": "Note updated successfully", "note": ClientNote(**parse_from_mongo(updated_note))}
+
+# Get all notes for admin/agent dashboard
+@api_router.get("/notes/all")
+async def get_all_client_notes(current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Get all notes with trip and client info
+    notes = await db.client_notes.find().to_list(1000)
+    enriched_notes = []
+    
+    for note in notes:
+        # Get trip info
+        trip = await db.trips.find_one({"id": note["trip_id"]})
+        # Get client info
+        client = await db.users.find_one({"id": note["client_id"]})
+        
+        enriched_note = parse_from_mongo(note)
+        enriched_note["trip_title"] = trip["title"] if trip else "Unknown Trip"
+        enriched_note["client_name"] = f"{client['first_name']} {client['last_name']}" if client else "Unknown Client"
+        
+        enriched_notes.append(enriched_note)
+    
+    return enriched_notes
 
 # Users management (admin only)
 @api_router.get("/users", response_model=List[User])
