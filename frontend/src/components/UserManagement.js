@@ -431,6 +431,17 @@ const UserManagement = () => {
                   />
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="edit_phone">Cellulare</Label>
+                  <Input
+                    id="edit_phone"
+                    type="tel"
+                    value={editingUser.phone || ''}
+                    onChange={(e) => setEditingUser({...editingUser, phone: e.target.value})}
+                    placeholder="+39 123 456 7890"
+                  />
+                </div>
+
                 <div className="p-4 bg-slate-50 rounded-lg">
                   <p className="text-sm text-slate-600">
                     <strong>Ruolo:</strong> {getRoleLabel(editingUser.role)}
