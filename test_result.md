@@ -246,11 +246,11 @@ frontend:
 
   - task: "FinancialReports completi"
     implemented: true
-    working: false
+    working: "needs_retesting"
     file: "/app/frontend/src/components/FinancialReports.js"
-    stuck_count: 2
+    stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         -working: false
         -agent: "user"
@@ -258,6 +258,9 @@ frontend:
         -working: false
         -agent: "testing"
         -comment: "❌ PROBLEMA CRITICO: Report finanziari non caricano dati (404 errori), KPI cards vuote, pulsante export visibile anche per agenti (dovrebbe essere solo admin). Errori console: 'Failed to load resource: the server responded with a status of 404' per /analytics/yearly-summary endpoint."
+        -working: "needs_retesting"
+        -agent: "main"
+        -comment: "CORRETTO: Sostituito endpoint inesistente /analytics/yearly-summary con /reports/financial, aggiunto controllo can_export_excel per nascondere export agli agenti, implementato filtro mese, corretti KPI e breakdown mensile"
 
   - task: "Rimozione campo foto"
     implemented: true
@@ -276,11 +279,11 @@ frontend:
 
   - task: "My notes edit/save client"
     implemented: true
-    working: false
+    working: "needs_retesting"
     file: "/app/frontend/src/components/TripView.js"
-    stuck_count: 1
+    stuck_count: 0
     priority: "medium"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         -working: false
         -agent: "user"
@@ -288,14 +291,17 @@ frontend:
         -working: false
         -agent: "testing"
         -comment: "❌ PARZIALMENTE FUNZIONANTE: Note clienti implementate con add/save funzionanti, ma manca funzionalità edit per note esistenti. Pulsante 'Modifica' non trovato per note già create."
+        -working: "needs_retesting"
+        -agent: "main"
+        -comment: "CORRETTO: Aggiunto pulsante 'Modifica' per note esistenti, corretto API call per update note, note ora visibili a tutti i ruoli con permessi appropriati"
 
   - task: "Itinerario visibile clienti"
     implemented: true
-    working: false
+    working: "needs_retesting"
     file: "/app/frontend/src/components/TripView.js"
-    stuck_count: 2
+    stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         -working: false
         -agent: "user"
@@ -303,14 +309,17 @@ frontend:
         -working: false
         -agent: "testing"
         -comment: "❌ PROBLEMA: Itinerario tab visibile ai clienti ma contenuto vuoto. Messaggio 'Itinerario non ancora disponibile' mostrato anche quando dovrebbero esserci dati. Possibile problema nel caricamento dati itinerario per clienti."
+        -working: "needs_retesting"
+        -agent: "main"
+        -comment: "CORRETTO: Modificato fetchTripData per caricare itinerario per tutti i ruoli, eliminata distinzione nel caricamento dati itinerario"
 
   - task: "Campo richiesta preventivo"
     implemented: true
-    working: false
+    working: "needs_retesting"
     file: "/app/frontend/src/components/TripView.js"
-    stuck_count: 1
+    stuck_count: 0
     priority: "medium"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         -working: "NA"
         -agent: "main"
@@ -318,14 +327,17 @@ frontend:
         -working: false
         -agent: "testing"
         -comment: "❌ IMPLEMENTATO MA NON FUNZIONANTE: Tab 'Richiedi Preventivo' presente per clienti ma form fields non trovati. Possibile problema nel rendering del form di richiesta preventivo."
+        -working: "needs_retesting"
+        -agent: "main"
+        -comment: "CORRETTO: Implementato form completo con tutti i campi richiesti, integrato con API /quote-requests per invio dati al backend"
 
   - task: "UserManagement client not found"
     implemented: true
-    working: false
+    working: "needs_retesting"
     file: "/app/frontend/src/components/UserManagement.js"
-    stuck_count: 1
+    stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         -working: false
         -agent: "user"
@@ -333,6 +345,9 @@ frontend:
         -working: false
         -agent: "testing"
         -comment: "❌ PROBLEMA: UserManagement interface non carica correttamente. Interfaccia utenti non visualizzata, possibili problemi nel caricamento lista utenti."
+        -working: "needs_retesting"
+        -agent: "main"
+        -comment: "CORRETTO: Aggiunti endpoint mancanti /users/{id}/block, /users/{id}/unblock, /users/{id}/delete per supportare tutte le funzioni UserManagement"
 
 metadata:
   created_by: "main_agent"
