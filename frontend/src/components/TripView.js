@@ -178,50 +178,6 @@ const TripView = () => {
     setShowStatusDialog(true);
   };
 
-  const handleSaveCruiseDetails = async () => {
-    try {
-      await axios.post(`${API}/trips/${tripId}/cruise-details`, cruiseDetailsForm);
-      toast.success('Dettagli crociera salvati con successo!');
-      fetchTripData(); // Refresh data
-    } catch (error) {
-      console.error('Error saving cruise details:', error);
-      toast.error('Errore nel salvataggio dei dettagli crociera');
-    }
-  };
-
-  const handleSaveResortDetails = async () => {
-    try {
-      await axios.post(`${API}/trips/${tripId}/resort-details`, resortDetailsForm);
-      toast.success('Dettagli resort salvati con successo!');
-      fetchTripData(); // Refresh data
-    } catch (error) {
-      console.error('Error saving resort details:', error);
-      toast.error('Errore nel salvataggio dei dettagli resort');
-    }
-  };
-
-  const handleSaveTourDetails = async () => {
-    try {
-      await axios.post(`${API}/trips/${tripId}/tour-details`, tourDetailsForm);
-      toast.success('Dettagli tour salvati con successo!');
-      fetchTripData(); // Refresh data
-    } catch (error) {
-      console.error('Error saving tour details:', error);
-      toast.error('Errore nel salvataggio dei dettagli tour');
-    }
-  };
-
-  const handleSaveCustomDetails = async () => {
-    try {
-      await axios.post(`${API}/trips/${tripId}/custom-details`, customDetailsForm);
-      toast.success('Dettagli personalizzati salvati con successo!');
-      fetchTripData(); // Refresh data
-    } catch (error) {
-      console.error('Error saving custom details:', error);
-      toast.error('Errore nel salvataggio dei dettagli personalizzati');
-    }
-  };
-
   const getGridColsClass = () => {
     const totalTabs = tabsToShow.length + (user.role !== 'client' ? 2 : 0); // +2 for client-notes and trip-details
     if (totalTabs <= 2) return 'grid-cols-2';
