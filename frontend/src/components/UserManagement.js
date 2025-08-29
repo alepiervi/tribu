@@ -87,7 +87,8 @@ const UserManagement = () => {
       await axios.put(`${API}/users/${editingUser.id}`, {
         first_name: editingUser.first_name,
         last_name: editingUser.last_name,
-        email: editingUser.email
+        email: editingUser.email,
+        phone: editingUser.phone || ''
       });
       toast.success('Utente aggiornato con successo!');
       setEditingUser(null);
