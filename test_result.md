@@ -494,6 +494,14 @@ metadata:
   tripview_tabs_trip_id: "c48cbf70-214b-492d-b295-838d7c8dad89"
   tripview_tabs_credentials: "admin@test.it / password123"
   tripview_tabs_test_details: "viaggio_cruise_completo_con_itinerario_e_info_nave"
+  trip_details_endpoints_tested: true
+  trip_details_endpoints_test_date: "2025-01-11"
+  trip_details_endpoints_test_status: "all_5_endpoints_working_correctly"
+  trip_details_endpoints_tests_passed: "23/25"
+  trip_details_endpoints_success_rate: "92.0%"
+  trip_details_endpoints_cruise_trip_id: "c48cbf70-214b-492d-b295-838d7c8dad89"
+  trip_details_endpoints_credentials: "admin@test.it / password123"
+  trip_details_endpoints_sample_data: "MSC_Seaside_Premium_cabina_7145_Civitavecchia"
 
 test_plan:
   current_focus:
