@@ -254,9 +254,22 @@ const TripView = () => {
             </div>
             
             <div className="flex items-center gap-4">
-              <Badge className={getStatusColor(trip.status)}>
-                {trip.status}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge className={getStatusColor(trip.status)}>
+                  {trip.status}
+                </Badge>
+                {user.role !== 'client' && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={openStatusDialog}
+                    className="flex items-center gap-2"
+                  >
+                    <Settings className="w-4 h-4" />
+                    Cambia Stato
+                  </Button>
+                )}
+              </div>
               <Badge className={getTripTypeColor(trip.trip_type)}>
                 {trip.trip_type}
               </Badge>
