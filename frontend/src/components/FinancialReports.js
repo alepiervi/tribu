@@ -155,9 +155,9 @@ const FinancialReports = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="year">Anno</Label>
-                <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+                <Select value={selectedYear ? selectedYear.toString() : ""} onValueChange={(value) => setSelectedYear(parseInt(value))}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Seleziona anno" />
                   </SelectTrigger>
                   <SelectContent>
                     {getCurrentYearRange().map(year => (
@@ -171,7 +171,7 @@ const FinancialReports = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="month">Mese (opzionale)</Label>
-                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <Select value={selectedMonth ? selectedMonth.toString() : ""} onValueChange={(value) => setSelectedMonth(value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Tutto l'anno" />
                   </SelectTrigger>
@@ -189,7 +189,7 @@ const FinancialReports = () => {
               {user.role === 'admin' && (
                 <div className="space-y-2">
                   <Label htmlFor="agent">Agente</Label>
-                  <Select value={selectedAgent} onValueChange={setSelectedAgent}>
+                  <Select value={selectedAgent || ""} onValueChange={(value) => setSelectedAgent(value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Tutti gli agenti" />
                     </SelectTrigger>
