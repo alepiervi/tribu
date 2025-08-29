@@ -174,6 +174,17 @@ const ItineraryManager = () => {
     return lastDate.toISOString().split('T')[0];
   };
 
+  const openCreateDialog = () => {
+    setNewItinerary({
+      day_number: generateNextDayNumber(),
+      date: calculateNextDate(),
+      title: '',
+      description: '',
+      itinerary_type: 'tour_day'
+    });
+    setShowCreateDialog(true);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
