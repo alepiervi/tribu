@@ -762,34 +762,64 @@ const TripView = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <label className="block text-sm font-medium text-blue-700 mb-1">Nome Nave</label>
-                            <Input placeholder="Es: MSC Seaside" />
+                            <Input 
+                              placeholder="Es: MSC Seaside" 
+                              value={cruiseDetailsForm.ship_name}
+                              onChange={(e) => setCruiseDetailsForm({...cruiseDetailsForm, ship_name: e.target.value})}
+                            />
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-blue-700 mb-1">Porto di Imbarco</label>
-                            <Input placeholder="Es: Civitavecchia" />
+                            <Input 
+                              placeholder="Es: Civitavecchia" 
+                              value={cruiseDetailsForm.boarding_port}
+                              onChange={(e) => setCruiseDetailsForm({...cruiseDetailsForm, boarding_port: e.target.value})}
+                            />
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-blue-700 mb-1">Numero Cabina</label>
-                            <Input placeholder="Es: 7145" />
+                            <Input 
+                              placeholder="Es: 7145" 
+                              value={cruiseDetailsForm.cabin_number}
+                              onChange={(e) => setCruiseDetailsForm({...cruiseDetailsForm, cabin_number: e.target.value})}
+                            />
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-blue-700 mb-1">Tipo Pacchetto</label>
-                            <Input placeholder="Es: Balcone Premium" />
+                            <Input 
+                              placeholder="Es: Balcone Premium" 
+                              value={cruiseDetailsForm.package_type}
+                              onChange={(e) => setCruiseDetailsForm({...cruiseDetailsForm, package_type: e.target.value})}
+                            />
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-blue-700 mb-1">Tipo Assicurazione</label>
-                            <Input placeholder="Es: Annullamento + Medica" />
+                            <Input 
+                              placeholder="Es: Annullamento + Medica" 
+                              value={cruiseDetailsForm.insurance_type}
+                              onChange={(e) => setCruiseDetailsForm({...cruiseDetailsForm, insurance_type: e.target.value})}
+                            />
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-blue-700 mb-1">Ristorante</label>
-                            <Input placeholder="Es: Ristorante Principale" />
+                            <Input 
+                              placeholder="Es: Ristorante Principale" 
+                              value={cruiseDetailsForm.restaurant}
+                              onChange={(e) => setCruiseDetailsForm({...cruiseDetailsForm, restaurant: e.target.value})}
+                            />
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-blue-700 mb-1">Turno Cena</label>
-                            <Input placeholder="Es: Secondo turno - 21:00" />
+                            <Input 
+                              placeholder="Es: Secondo turno - 21:00" 
+                              value={cruiseDetailsForm.dinner_time}
+                              onChange={(e) => setCruiseDetailsForm({...cruiseDetailsForm, dinner_time: e.target.value})}
+                            />
                           </div>
                         </div>
-                        <Button className="mt-4">Salva Informazioni Crociera</Button>
+                        <Button className="mt-4" onClick={handleSaveCruiseDetails}>
+                          Salva Informazioni Crociera
+                        </Button>
                       </div>
                     )}
 
