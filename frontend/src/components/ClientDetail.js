@@ -214,7 +214,7 @@ const ClientDetail = () => {
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="trips" className="flex items-center gap-2">
               <Plane className="w-4 h-4" />
-              Viaggi ({clientTrips.length})
+              Viaggi ({clientTrips?.length || 0})
             </TabsTrigger>
             <TabsTrigger value="financial" className="flex items-center gap-2">
               <TrendingUp className="w-4 h-4" />
