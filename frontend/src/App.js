@@ -370,6 +370,14 @@ function App() {
               }
             />
             <Route
+              path="/quote-requests"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'agent']}>
+                  <QuoteRequests />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/trip-admin/:tripId"
               element={
                 <ProtectedRoute allowedRoles={['admin', 'agent']}>
