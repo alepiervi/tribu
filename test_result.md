@@ -158,6 +158,9 @@ backend:
         -working: true
         -agent: "testing"
         -comment: "FOCUSED TEST COMPLETATO: /api/reports/financial con year=2025 e nessun filtro agente funziona perfettamente. Admin ha accesso completo e permessi export Excel. Struttura response completa con period, totals, monthly_breakdown, detailed_trips. 9/9 test specifici passati."
+        -working: true
+        -agent: "testing"
+        -comment: "REVIEW REQUEST TEST 2 COMPLETATO: ✅ REPORT FINANZIARI CON NOMI funziona perfettamente. Testato GET /api/reports/financial?year=2025 con credenziali admin@test.it. I 'detailed_trips' ora includono TUTTI i campi richiesti: client_name='Client One', agent_name='Agent One', trip_title='Test Cruise to Mediterranean', trip_destination='Mediterranean Sea'. Report mostra 2 viaggi confermati con fatturato totale €4400. Funzionalità implementata correttamente come richiesto."
 
   - task: "Fix errore client not found"
     implemented: true
