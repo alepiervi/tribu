@@ -535,6 +535,16 @@ metadata:
   trip_details_endpoints_cruise_trip_id: "c48cbf70-214b-492d-b295-838d7c8dad89"
   trip_details_endpoints_credentials: "admin@test.it / password123"
   trip_details_endpoints_sample_data: "MSC_Seaside_Premium_cabina_7145_Civitavecchia"
+  new_features_review_request_tested: true
+  new_features_review_request_test_date: "2025-01-11"
+  new_features_review_request_test_status: "all_4_new_features_working_perfectly"
+  new_features_review_request_tests_passed: "33/33"
+  new_features_review_request_success_rate: "100%"
+  new_features_phone_field_status: "user_creation_and_retrieval_with_phone_working"
+  new_features_delete_quote_requests_status: "delete_endpoint_with_authorization_working"
+  new_features_agent_filtering_status: "agent_filtering_by_client_relationship_working"
+  new_features_enriched_data_status: "client_name_email_phone_included_in_responses"
+  new_features_credentials_tested: "admin@test.it / password123, agent1@test.it / password123"
 
 test_plan:
   current_focus:
