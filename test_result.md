@@ -411,8 +411,8 @@ frontend:
 
 metadata:
   created_by: "main_agent"
-  version: "1.8"
-  test_sequence: 8
+  version: "1.9"
+  test_sequence: 9
   run_ui: true
   backend_testing_completed: true
   backend_test_date: "2025-01-11"
@@ -447,6 +447,13 @@ metadata:
   complete_test_journey_trip_id: "76c2e3da-8311-4409-8267-fa036a2252dc"
   complete_test_journey_admin_id: "d58543b4-5c2d-48a4-9031-d3c481f693f7"
   complete_test_journey_client_id: "a625665f-e1c9-4b4c-a6bd-aaef9ae4e5f1"
+  review_request_specific_tested: true
+  review_request_test_date: "2025-01-11"
+  review_request_test_status: "both_functionalities_working_perfectly"
+  review_request_tests_passed: "108/112"
+  review_request_success_rate: "96.4%"
+  review_request_test1_status: "manual_trip_status_change_working"
+  review_request_test2_status: "financial_reports_with_names_working"
 
 test_plan:
   current_focus:
