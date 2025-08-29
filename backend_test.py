@@ -2520,33 +2520,22 @@ class TravelAgencyAPITester:
         return result
 
     def run_all_tests(self):
-        """Run all test suites with focus on review request"""
+        """Run all test suites with focus on NEW FEATURES review request"""
         print("🚀 Starting Travel Agency API Tests...")
         print(f"Testing against: {self.base_url}")
-        print("🎯 FOCUS: Testing REVIEW REQUEST - Dashboard Stats & Excel Export")
+        print("🎯 FOCUS: Testing NEW FEATURES - Phone field, DELETE quote requests, Agent filtering, Enriched data")
         
         # Test authentication first with provided credentials
         if not self.test_authentication():
             print("❌ Authentication tests failed - stopping")
             return False
 
-        # PRIORITY 1: Test the specific review request FIRST
+        # PRIORITY 1: Test the NEW FEATURES from review request FIRST
         print("\n" + "="*60)
-        print("🎯 REVIEW REQUEST: Dashboard Stats & Excel Export (PRIMARY FOCUS)")
+        print("🎯 NEW FEATURES REVIEW REQUEST (PRIMARY FOCUS)")
+        print("📱 Campo cellulare, 🗑️ DELETE quote requests, 🔍 Filtro agente, 📊 Enriched data")
         print("="*60)
-        self.test_review_request_dashboard_and_excel()
-
-        # PRIORITY 2: Test the bug fix functionalities
-        print("\n" + "="*60)
-        print("🎯 BUG FIX TEST: Trip Confirmed → Financial Reports (SECONDARY FOCUS)")
-        print("="*60)
-        self.test_trip_confirmed_status_financial_reports_fix()
-
-        # PRIORITY 3: Test the review request functionalities
-        print("\n" + "="*60)
-        print("🎯 REVIEW REQUEST SPECIFIC TESTS (TERTIARY FOCUS)")
-        print("="*60)
-        self.test_review_request_specific()
+        self.test_new_features_review_request()
 
         # Print final results
         print(f"\n📊 Test Results: {self.tests_passed}/{self.tests_run} passed")
