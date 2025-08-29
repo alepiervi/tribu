@@ -494,10 +494,11 @@ metadata:
 
 test_plan:
   current_focus:
+    - "API trip details (cruise/resort/tour/custom)"
     - "TripView tabs testing cruise trip created successfully"
   stuck_tasks: []
   test_all: false
-  test_priority: "tripview_tabs_test_completed_successfully"
+  test_priority: "backend_trip_details_first_then_frontend_tabs"
 
 agent_communication:
     -agent: "main"
