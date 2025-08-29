@@ -345,13 +345,15 @@ metadata:
 
 test_plan:
   current_focus:
-    - "TripView modifica itinerario/cruise"
     - "FinancialReports completi"
     - "Itinerario visibile clienti"
+    - "Campo richiesta preventivo"
+    - "My notes edit/save client"
+    - "UserManagement client not found"
   stuck_tasks:
-    - "TripView modifica itinerario/cruise"
     - "FinancialReports completi"
     - "Itinerario visibile clienti"
+    - "Campo richiesta preventivo"
   test_all: false
   test_priority: "high_first"
 
