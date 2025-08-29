@@ -311,6 +311,12 @@ const UserManagement = () => {
                         <Mail className="w-4 h-4" />
                         <span>{u.email}</span>
                       </div>
+                      {u.phone && (
+                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                          <Phone className="w-4 h-4" />
+                          <span>{u.phone}</span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-3 mt-2">
                         <Badge className={getRoleColor(u.role)}>
                           {getRoleLabel(u.role)}
