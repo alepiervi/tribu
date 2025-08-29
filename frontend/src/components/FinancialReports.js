@@ -382,20 +382,40 @@ const FinancialReports = () => {
                 <div className="space-y-4">
                   {reportData.detailed_trips && reportData.detailed_trips.length > 0 ? reportData.detailed_trips.map((trip) => (
                     <div key={trip.id} className="border border-slate-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h4 className="font-semibold text-slate-800">
-                            Pratica: {trip.practice_number}
-                          </h4>
-                          <p className="text-sm text-slate-600">
-                            Prenotazione: {trip.booking_number}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            Confermata: {new Date(trip.practice_confirm_date).toLocaleDateString('it-IT')}
-                          </p>
+                          <div className="flex items-center gap-4 mb-2">
+                            <h4 className="font-semibold text-slate-800">
+                              {trip.trip_title || 'Titolo non disponibile'}
+                            </h4>
+                            <Badge variant="outline" className="text-xs">
+                              Pratica: {trip.practice_number}
+                            </Badge>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                            <div className="flex items-center gap-2 text-sm text-slate-600">
+                              <User className="w-4 h-4" />
+                              <span>
+                                <strong>Cliente:</strong> {trip.client_name || 'Non disponibile'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-slate-600">
+                              <Users className="w-4 h-4" />
+                              <span>
+                                <strong>Agente:</strong> {trip.agent_name || 'Non disponibile'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-4 text-xs text-slate-500">
+                            <span>Prenotazione: {trip.booking_number}</span>
+                            <span>Confermata: {new Date(trip.practice_confirm_date).toLocaleDateString('it-IT')}</span>
+                            {trip.trip_destination && <span>Dest.: {trip.trip_destination}</span>}
+                          </div>
                         </div>
                         
-                        <div className="grid grid-cols-5 gap-4 text-sm">
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm ml-4">
                           <div className="text-right">
                             <div className="font-semibold">{formatCurrency(trip.gross_amount)}</div>
                             <div className="text-slate-500">Lordo</div>
