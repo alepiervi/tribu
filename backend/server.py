@@ -1948,6 +1948,26 @@ async def update_quote_request(
     await db.quote_requests.update_one({"id": request_id}, {"$set": update_dict})
     return {"message": "Quote request updated successfully"}
 
+@api_router.delete("/quote-requests/{request_id}")
+async def delete_quote_request(
+    request_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete a quote request"""
+    request = await db.quote_requests.find_one({"id": request_id})
+    if not request:
+        raise HTTPException(status_code=404, detail="Quote request not found")
+    
+    # Authorization check - only admin, agent, or the client who created it
+    if current_user["role"] == "client":
+        if request["client_id"] != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Not authorized")
+    elif current_user["role"] not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    await db.quote_requests.delete_one({"id": request_id})
+    return {"message": "Quote request deleted successfully"}
+
 # Client Details and Financial Summary
 @api_router.get("/clients/{client_id}/details")
 async def get_client_details(client_id: str, current_user: dict = Depends(get_current_user)):
