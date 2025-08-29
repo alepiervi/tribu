@@ -787,23 +787,35 @@ class TravelAgencyAPITester:
         return True
 
     def run_all_tests(self):
-        """Run all test suites"""
+        """Run all test suites with focus on new endpoints"""
         print("🚀 Starting Travel Agency API Tests...")
         print(f"Testing against: {self.base_url}")
+        print("🎯 FOCUS: Testing NEW endpoints as requested")
         
-        # Test authentication first
+        # Test authentication first with provided credentials
         if not self.test_authentication():
             print("❌ Authentication tests failed - stopping")
             return False
 
+        # PRIORITY: Test all new endpoints comprehensively
+        print("\n" + "="*60)
+        print("🆕 TESTING NEW ENDPOINTS (PRIMARY FOCUS)")
+        print("="*60)
+        self.test_new_endpoints_comprehensive()
+
+        # Additional tests for context
+        print("\n" + "="*60)
+        print("📋 ADDITIONAL CONTEXT TESTS")
+        print("="*60)
+        
         # Test user management
         self.test_user_management()
 
-        # Test trip management
+        # Test trip management (needed for status tests)
         trip_id = self.test_trip_management()
         
         if trip_id:
-            # Test financial management
+            # Test financial management (needed for financial reports)
             admin_id = self.test_financial_management(trip_id)
             
             # Test itinerary management
