@@ -305,3 +305,5 @@ test_plan:
 agent_communication:
     -agent: "main"
     -message: "Iniziando correzioni backend per primo batch: API mancanti per modifica itinerario/cruise, report finanziari completi, fix client not found, gestione stato viaggi"
+    -agent: "main"
+    -message: "COMPLETATO PRIMO BATCH BACKEND: Aggiunti endpoint /reports/financial completi con breakdown mensili, /financial-sheets CRUD, /trips/{id}/status per gestione stati, migliorati endpoint notes per visibilità admin/agent, implementati /quote-requests. Pronto per test backend."
