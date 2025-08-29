@@ -200,7 +200,7 @@ const FinancialReports = () => {
                       <SelectValue placeholder="Tutti gli agenti" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Tutti gli agenti</SelectItem>
+                      <SelectItem value="all">Tutti gli agenti</SelectItem>
                       {agents.map(agent => (
                         <SelectItem key={agent.id} value={agent.id}>
                           {agent.first_name} {agent.last_name}
