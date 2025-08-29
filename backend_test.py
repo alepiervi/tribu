@@ -1161,6 +1161,9 @@ class TravelAgencyAPITester:
         
         # PRIORITY: Test NEW client details endpoints (REVIEW REQUEST)
         self.test_new_client_details_endpoints()
+        
+        # PRIORITY: Test orphaned data cleanup (REVIEW REQUEST)
+        self.test_orphaned_data_cleanup()
 
         return True
 
