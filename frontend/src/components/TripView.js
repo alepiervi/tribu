@@ -101,7 +101,8 @@ const TripView = () => {
       // Cruise info per admin/agent
       if (user.role !== 'client') {
         requests.push(axios.get(`${API}/trips/${tripId}/cruise-info`));
-        requests.push(axios.get(`${API}/trips/${tripId}/details`));
+        // Trip details per admin/agent
+        requests.push(axios.get(`${API}/trips/${tripId}/details`).catch(() => ({ data: { trip_type: 'cruise' } })));
       }
 
       // Note per tutti i ruoli (clienti vedono le proprie, admin/agent tutte)
