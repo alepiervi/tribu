@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Optional
 
 class ComprehensiveTester:
-    def __init__(self, base_url="https://agenzia-viaggi.preview.emergentagent.com"):
+    def __init__(self, base_url="https://viaggi-app.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.admin_token = None
