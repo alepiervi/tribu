@@ -221,6 +221,17 @@ const UserManagement = () => {
                     </div>
 
                     <div className="space-y-2">
+                      <Label htmlFor="phone">Cellulare</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={newUser.phone}
+                        onChange={(e) => setNewUser({...newUser, phone: e.target.value})}
+                        placeholder="+39 123 456 7890"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
                       <Label htmlFor="password">Password</Label>
                       <Input
                         id="password"
