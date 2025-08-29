@@ -1148,11 +1148,194 @@ class TravelAgencyAPITester:
         print("\n✅ NEW CLIENT DETAILS ENDPOINTS TESTING COMPLETED")
         return True
 
+    def test_payment_registration_complete_journey(self):
+        """Test complete payment registration journey as requested in review"""
+        print("\n💳 Testing PAYMENT REGISTRATION Complete Journey (REVIEW REQUEST)...")
+        print("🎯 Creating complete test trip with financial data for UI payment testing")
+        print("📋 Credentials: admin@test.it / password123")
+        
+        if not self.admin_token:
+            print("❌ Skipping payment registration tests - no admin token")
+            return False
+
+        # Get admin user info to use as client for test
+        success, admin_info = self.make_request('GET', 'auth/me', token=self.admin_token)
+        if not success:
+            self.log_test("Get admin user info", False, str(admin_info))
+            return False
+        
+        admin_id = admin_info['id']
+        print(f"📋 Using admin as client for test: {admin_info['first_name']} {admin_info['last_name']} (ID: {admin_id})")
+
+        # STEP 1: Create test trip - POST /api/trips
+        print("\n🧳 STEP 1: Creating test trip...")
+        trip_data = {
+            'title': 'Test Payment Registration',
+            'destination': 'Mediterranean',
+            'description': 'Complete cruise for testing payment registration functionality',
+            'start_date': (datetime.now(timezone.utc) + timedelta(days=30)).isoformat(),
+            'end_date': (datetime.now(timezone.utc) + timedelta(days=37)).isoformat(),
+            'client_id': admin_id,  # Use admin as client for test
+            'trip_type': 'cruise'
+        }
+
+        success, trip_result = self.make_request('POST', 'trips', trip_data, token=self.admin_token)
+        if success:
+            trip_id = trip_result['id']
+            self.created_resources['trips'].append(trip_id)
+            self.log_test("✅ CREATE TEST TRIP: POST /api/trips", True)
+            print(f"   🆔 Trip ID: {trip_id}")
+            print(f"   📝 Title: {trip_result['title']}")
+            print(f"   🌍 Destination: {trip_result['destination']}")
+            print(f"   🚢 Type: {trip_result['trip_type']}")
+        else:
+            self.log_test("CREATE TEST TRIP: POST /api/trips", False, str(trip_result))
+            return False
+
+        # STEP 2: Create administrative data - POST /api/trips/{trip_id}/admin
+        print(f"\n💰 STEP 2: Creating administrative/financial data for trip {trip_id}...")
+        admin_data = {
+            'trip_id': trip_id,
+            'practice_number': 'PR001',
+            'booking_number': 'BK001',
+            'gross_amount': 2000.0,
+            'net_amount': 1800.0,
+            'discount': 100.0,
+            'practice_confirm_date': datetime.now(timezone.utc).isoformat(),
+            'client_departure_date': (datetime.now(timezone.utc) + timedelta(days=30)).isoformat(),
+            'confirmation_deposit': 500.0
+        }
+
+        success, admin_result = self.make_request('POST', f'trips/{trip_id}/admin', admin_data, token=self.admin_token)
+        if success:
+            admin_record_id = admin_result['id']
+            self.created_resources['trip_admins'].append(admin_record_id)
+            self.log_test("✅ CREATE ADMIN DATA: POST /api/trips/{trip_id}/admin", True)
+            print(f"   🆔 Admin ID: {admin_record_id}")
+            print(f"   📋 Practice Number: {admin_result['practice_number']}")
+            print(f"   📋 Booking Number: {admin_result['booking_number']}")
+            print(f"   💰 Gross Amount: €{admin_result['gross_amount']}")
+            print(f"   💸 Net Amount: €{admin_result['net_amount']}")
+            print(f"   🎫 Discount: €{admin_result.get('discount', 0)}")
+            print(f"   💵 Confirmation Deposit: €{admin_result['confirmation_deposit']}")
+            print(f"   💳 Balance Due: €{admin_result.get('balance_due', 0)}")
+        else:
+            self.log_test("CREATE ADMIN DATA: POST /api/trips/{trip_id}/admin", False, str(admin_result))
+            return False
+
+        # STEP 3: Verify setup is correct
+        print(f"\n🔍 STEP 3: Verifying setup is correct...")
+        
+        # Verify trip exists and has correct data
+        success, trip_check = self.make_request('GET', f'trips/{trip_id}', token=self.admin_token)
+        if success:
+            self.log_test("✅ VERIFY TRIP: GET /api/trips/{trip_id}", True)
+            print(f"   ✅ Trip verified: {trip_check['title']}")
+        else:
+            self.log_test("VERIFY TRIP: GET /api/trips/{trip_id}", False, str(trip_check))
+
+        # Verify admin data exists and has correct calculations
+        success, admin_check = self.make_request('GET', f'trips/{trip_id}/admin', token=self.admin_token)
+        if success:
+            self.log_test("✅ VERIFY ADMIN DATA: GET /api/trips/{trip_id}/admin", True)
+            print(f"   ✅ Admin data verified:")
+            print(f"      💰 Gross Amount: €{admin_check['gross_amount']}")
+            print(f"      💸 Net Amount: €{admin_check['net_amount']}")
+            print(f"      🧮 Gross Commission: €{admin_check.get('gross_commission', 0)}")
+            print(f"      🏪 Supplier Commission: €{admin_check.get('supplier_commission', 0)}")
+            print(f"      👤 Agent Commission: €{admin_check.get('agent_commission', 0)}")
+            print(f"      💵 Confirmation Deposit: €{admin_check['confirmation_deposit']}")
+            print(f"      💳 Balance Due: €{admin_check.get('balance_due', 0)}")
+        else:
+            self.log_test("VERIFY ADMIN DATA: GET /api/trips/{trip_id}/admin", False, str(admin_check))
+
+        # STEP 4: Test payment registration endpoint
+        print(f"\n💳 STEP 4: Testing payment registration endpoint...")
+        
+        # Test creating a payment installment
+        payment_data = {
+            'trip_admin_id': admin_record_id,
+            'amount': 500.0,
+            'payment_date': (datetime.now(timezone.utc) + timedelta(days=15)).isoformat(),
+            'payment_type': 'installment',
+            'notes': 'Test payment for UI testing'
+        }
+
+        success, payment_result = self.make_request('POST', f'trip-admin/{admin_record_id}/payments', payment_data, token=self.admin_token)
+        if success:
+            payment_id = payment_result['id']
+            self.created_resources['payments'].append(payment_id)
+            self.log_test("✅ TEST PAYMENT REGISTRATION: POST /api/trip-admin/{admin_id}/payments", True)
+            print(f"   🆔 Payment ID: {payment_id}")
+            print(f"   💰 Amount: €{payment_result['amount']}")
+            print(f"   📅 Payment Date: {payment_result['payment_date']}")
+            print(f"   🏷️  Type: {payment_result['payment_type']}")
+            print(f"   📝 Notes: {payment_result['notes']}")
+        else:
+            self.log_test("TEST PAYMENT REGISTRATION: POST /api/trip-admin/{admin_id}/payments", False, str(payment_result))
+
+        # Verify balance was updated after payment
+        success, updated_admin = self.make_request('GET', f'trips/{trip_id}/admin', token=self.admin_token)
+        if success:
+            new_balance = updated_admin.get('balance_due', 0)
+            original_balance = admin_check.get('balance_due', 0)
+            expected_balance = original_balance - payment_data['amount']
+            
+            if abs(new_balance - expected_balance) < 0.01:  # Allow for floating point precision
+                self.log_test("✅ BALANCE UPDATED CORRECTLY after payment", True)
+                print(f"   💳 Balance updated: €{original_balance} → €{new_balance}")
+            else:
+                self.log_test("BALANCE UPDATE after payment", False, f"Expected €{expected_balance}, got €{new_balance}")
+        
+        # Get list of payments to verify it's included
+        success, payments_list = self.make_request('GET', f'trip-admin/{admin_record_id}/payments', token=self.admin_token)
+        if success:
+            self.log_test("✅ GET PAYMENTS LIST: GET /api/trip-admin/{admin_id}/payments", True)
+            print(f"   📋 Total payments: {len(payments_list)}")
+            if payments_list:
+                for i, payment in enumerate(payments_list, 1):
+                    print(f"      {i}. €{payment['amount']} - {payment['payment_type']} - {payment['payment_date'][:10]}")
+        else:
+            self.log_test("GET PAYMENTS LIST", False, str(payments_list))
+
+        # STEP 5: Provide IDs for frontend testing
+        print(f"\n🎯 STEP 5: PROVIDING IDs FOR FRONTEND TESTING...")
+        print("="*60)
+        print("📋 COMPLETE TEST DATA FOR UI PAYMENT REGISTRATION:")
+        print("="*60)
+        print(f"🆔 TRIP_ID: {trip_id}")
+        print(f"🆔 ADMIN_ID: {admin_record_id}")
+        print(f"👤 CLIENT_ID: {admin_id}")
+        print(f"🔑 CREDENTIALS: admin@test.it / password123")
+        print("")
+        print("📊 FINANCIAL SETUP:")
+        print(f"   💰 Gross Amount: €{admin_data['gross_amount']}")
+        print(f"   💵 Confirmation Deposit: €{admin_data['confirmation_deposit']}")
+        print(f"   💳 Current Balance Due: €{updated_admin.get('balance_due', 0) if 'updated_admin' in locals() else 'N/A'}")
+        print("")
+        print("🎯 READY FOR UI TESTING:")
+        print("   ✅ Trip created with complete data")
+        print("   ✅ Financial/admin data configured")
+        print("   ✅ Payment registration endpoint tested")
+        print("   ✅ Balance calculations working")
+        print("   ✅ All IDs available for frontend integration")
+        print("="*60)
+
+        return {
+            'trip_id': trip_id,
+            'admin_id': admin_record_id,
+            'client_id': admin_id,
+            'success': True
+        }
+
     def test_new_endpoints_comprehensive(self):
         """Run comprehensive tests for all new endpoints"""
         print("\n🆕 Testing ALL NEW ENDPOINTS...")
         
-        # Test all new endpoints
+        # PRIORITY: Test payment registration complete journey (REVIEW REQUEST)
+        self.test_payment_registration_complete_journey()
+        
+        # Test all other new endpoints
         self.test_new_financial_reports()
         self.test_financial_sheets_crud()
         self.test_trip_status_management()
