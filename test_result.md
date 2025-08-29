@@ -390,12 +390,12 @@ frontend:
 
 metadata:
   created_by: "main_agent"
-  version: "1.4"
-  test_sequence: 4
+  version: "1.5"
+  test_sequence: 5
   run_ui: true
   backend_testing_completed: true
   backend_test_date: "2025-01-11"
-  backend_tests_passed: "70/70"
+  backend_tests_passed: "87/88"
   frontend_testing_completed: true
   frontend_test_date: "2025-01-11"
   frontend_tests_status: "5_critical_issues_found"
@@ -407,6 +407,10 @@ metadata:
   rapid_verification_date: "2025-01-11"
   rapid_verification_status: "all_3_corrections_confirmed"
   rapid_verification_tests_passed: "24/24"
+  client_details_endpoints_tested: true
+  client_details_test_date: "2025-01-11"
+  client_details_test_status: "new_endpoints_working_perfectly"
+  client_details_tests_passed: "13/13"
 
 test_plan:
   current_focus:
