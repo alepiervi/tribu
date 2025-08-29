@@ -471,6 +471,13 @@ metadata:
   review_request_test2_excel_export_status: "admin_access_working_all_filters_working_agent_forbidden"
   review_request_test3_agent_dashboard_status: "confirmed_trips_present_active_trips_removed"
 
+test_plan:
+  current_focus:
+    - "Review request dashboard and Excel export testing completed successfully"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "review_request_completed_successfully"
+
 agent_communication:
     -agent: "main"
     -message: "Iniziando correzioni backend per primo batch: API mancanti per modifica itinerario/cruise, report finanziari completi, fix client not found, gestione stato viaggi"
