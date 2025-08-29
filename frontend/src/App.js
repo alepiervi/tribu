@@ -28,8 +28,8 @@ import ClientDetail from './components/ClientDetail';
 import NotificationCenter from './components/NotificationCenter';
 import QuoteRequests from './components/QuoteRequests';
 
-// Use environment backend URL directly
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+// Use environment backend URL directly or fallback to relative path
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 const API = `${BACKEND_URL}/api`;
 
 console.log('Backend configuration:', {
