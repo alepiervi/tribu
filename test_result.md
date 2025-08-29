@@ -409,6 +409,21 @@ frontend:
         -agent: "testing"
         -comment: "⚠️ NON TESTABILE: Clienti non hanno viaggi assegnati per accedere al form richiesta preventivo. Codice implementato correttamente con tutti i campi richiesti."
 
+  - task: "TripView Dettagli Viaggio tab integrazione"
+    implemented: true
+    working: "needs_testing"
+    file: "/app/frontend/src/components/TripView.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        -working: "NA"
+        -agent: "main"
+        -comment: "Integrazione frontend con nuovi endpoint trip details per tab 'Dettagli Viaggio'"
+        -working: "needs_testing"
+        -agent: "main"
+        -comment: "INTEGRAZIONE COMPLETATA: Aggiunto state management (cruiseDetailsForm, resortDetailsForm, tourDetailsForm, customDetailsForm), modificata fetchTripData per caricare dettagli esistenti, implementate funzioni save (handleSaveCruiseDetails, etc), convertiti input statici in controlled inputs con onChange handlers. Form completamente funzionale per tutti i tipi viaggio. PRONTO PER TEST FRONTEND."
+
   - task: "UserManagement client not found"
     implemented: true
     working: false
