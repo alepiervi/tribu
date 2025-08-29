@@ -306,14 +306,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Modifica itinerario nei dettagli viaggio"
-    - "Report finanziari completi"
-    - "Fix errore client not found"
-    - "Stato viaggi oltre draft"
+    - "TripView modifica itinerario/cruise"
+    - "FinancialReports completi"
+    - "Itinerario visibile clienti"
   stuck_tasks:
-    - "Modifica itinerario nei dettagli viaggio"
-    - "Fix errore client not found"
-    - "Stato viaggi oltre draft"
     - "TripView modifica itinerario/cruise"
     - "FinancialReports completi"
     - "Itinerario visibile clienti"
