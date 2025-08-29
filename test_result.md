@@ -246,11 +246,11 @@ frontend:
 
   - task: "FinancialReports completi"
     implemented: true
-    working: "needs_retesting"
+    working: false
     file: "/app/frontend/src/components/FinancialReports.js"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         -working: false
         -agent: "user"
@@ -261,6 +261,9 @@ frontend:
         -working: "needs_retesting"
         -agent: "main"
         -comment: "CORRETTO: Sostituito endpoint inesistente /analytics/yearly-summary con /reports/financial, aggiunto controllo can_export_excel per nascondere export agli agenti, implementato filtro mese, corretti KPI e breakdown mensile"
+        -working: false
+        -agent: "testing"
+        -comment: "❌ CRITICO: Pagina carica ma 0 KPI cards visualizzate, Export Excel button mancante per admin, API /reports/financial restituisce 401 Unauthorized. Problemi di autenticazione impediscono caricamento dati. Errori JavaScript su Select components."
 
   - task: "Rimozione campo foto"
     implemented: true
