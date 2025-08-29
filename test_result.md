@@ -119,11 +119,11 @@ backend:
 
   - task: "Report finanziari completi"
     implemented: true
-    working: "needs_testing"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         -working: false
         -agent: "user"
@@ -131,6 +131,9 @@ backend:
         -working: "needs_testing"
         -agent: "main"
         -comment: "Aggiunto endpoint /reports/financial con breakdown mensili/annuali completi e controllo export Excel per agenti"
+        -working: true
+        -agent: "testing"
+        -comment: "✅ TESTATO COMPLETAMENTE: Endpoint /api/reports/financial funziona correttamente. Admin ha can_export_excel=true, Agent ha can_export_excel=false. Breakdown mensili/annuali implementati. Parametri year, month, agent_id funzionano. Tutti i test passati."
 
   - task: "Fix errore client not found"
     implemented: true
