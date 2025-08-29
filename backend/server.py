@@ -1914,13 +1914,40 @@ async def get_quote_requests(current_user: dict = Depends(get_current_user)):
     if current_user["role"] == "client":
         # Clients see only their own requests
         requests = await db.quote_requests.find({"client_id": current_user["id"]}).to_list(1000)
-    elif current_user["role"] in ["admin", "agent"]:
-        # Admin and agents see all requests
+    elif current_user["role"] == "admin":
+        # Admin sees all requests
         requests = await db.quote_requests.find().to_list(1000)
+    elif current_user["role"] == "agent":
+        # Agent sees only requests from clients they created
+        # First get all clients created by this agent
+        agent_clients = await db.users.find({"role": "client"}).to_list(1000)
+        # Filter to only clients that don't have an explicit agent_id (meaning they were created by registration)
+        # OR clients that have this agent as their agent_id
+        # For now, we'll assume clients created by an agent have the agent in the "created_by" field
+        # Since we don't have that field, we'll use a different approach:
+        # Get trips where this agent is the agent, then get those client_ids
+        agent_trips = await db.trips.find({"agent_id": current_user["id"]}).to_list(1000)
+        client_ids = list(set([trip.get("client_id") for trip in agent_trips if trip.get("client_id")]))
+        
+        if client_ids:
+            requests = await db.quote_requests.find({"client_id": {"$in": client_ids}}).to_list(1000)
+        else:
+            requests = []
     else:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    return [parse_from_mongo(request) for request in requests]
+    # Enrich requests with client information
+    enriched_requests = []
+    for request in requests:
+        # Get client info
+        client = await db.users.find_one({"id": request["client_id"]})
+        if client:
+            request["client_name"] = f"{client['first_name']} {client['last_name']}"
+            request["client_email"] = client["email"]
+            request["client_phone"] = client.get("phone", "")
+        enriched_requests.append(parse_from_mongo(request))
+    
+    return enriched_requests
 
 @api_router.put("/quote-requests/{request_id}")
 async def update_quote_request(
