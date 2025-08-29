@@ -379,14 +379,10 @@ metadata:
 test_plan:
   current_focus:
     - "FinancialReports completi"
-    - "Itinerario visibile clienti"
-    - "Campo richiesta preventivo"
-    - "My notes edit/save client"
     - "UserManagement client not found"
   stuck_tasks:
     - "FinancialReports completi"
-    - "Itinerario visibile clienti"
-    - "Campo richiesta preventivo"
+    - "UserManagement client not found"
   test_all: false
   test_priority: "high_first"
 
