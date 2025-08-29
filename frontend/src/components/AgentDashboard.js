@@ -136,13 +136,13 @@ const AgentDashboard = () => {
           <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-green-100">
-                Viaggi Attivi
+                Viaggi Confermati
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center">
                 <TrendingUp className="h-8 w-8 text-green-200 mr-3" />
-                <div className="text-2xl font-bold">{stats.active_trips || 0}</div>
+                <div className="text-2xl font-bold">{stats.confirmed_trips || 0}</div>
               </div>
             </CardContent>
           </Card>
