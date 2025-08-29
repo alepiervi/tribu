@@ -381,10 +381,10 @@ const ClientDetail = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        {financialSummary.total_bookings}
+                        {financialSummary.stats?.total_trips || 0}
                       </div>
                       <div className="text-blue-100 text-sm">
-                        {financialSummary.confirmed_bookings} confermate
+                        {financialSummary.confirmed_bookings?.count || 0} confermate
                       </div>
                     </CardContent>
                   </Card>
@@ -397,10 +397,10 @@ const ClientDetail = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        {formatCurrency(financialSummary.confirmed_revenue)}
+                        {formatCurrency(financialSummary.confirmed_bookings?.total_gross_amount || 0)}
                       </div>
                       <div className="text-green-100 text-sm">
-                        Su {formatCurrency(financialSummary.total_revenue)} totale
+                        Media: {formatCurrency(financialSummary.stats?.average_trip_value || 0)}
                       </div>
                     </CardContent>
                   </Card>
@@ -413,10 +413,10 @@ const ClientDetail = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        {formatCurrency(financialSummary.confirmed_agent_commission)}
+                        {formatCurrency(financialSummary.confirmed_bookings?.total_agent_commission || 0)}
                       </div>
                       <div className="text-purple-100 text-sm">
-                        Margine agenzia
+                        Fornitore: {formatCurrency(financialSummary.confirmed_bookings?.total_supplier_commission || 0)}
                       </div>
                     </CardContent>
                   </Card>
@@ -429,25 +429,82 @@ const ClientDetail = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        {formatCurrency(financialSummary.confirmed_discounts)}
+                        {formatCurrency(financialSummary.confirmed_bookings?.total_discounts || 0)}
                       </div>
                       <div className="text-orange-100 text-sm">
-                        Valore scontato
+                        Pending: {formatCurrency(financialSummary.pending_bookings?.pending_gross_amount || 0)}
                       </div>
                     </CardContent>
                   </Card>
                 </div>
 
-                {/* Confirmed Bookings Details */}
+                {/* Summary Details */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Prenotazioni Confermate</CardTitle>
+                    <CardTitle>Riepilogo Finanziario</CardTitle>
                     <CardDescription>
-                      Dettaglio finanziario delle prenotazioni confermate
+                      Dettaglio completo delle performance del cliente
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {financialSummary.confirmed_booking_details.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="space-y-3">
+                        <h4 className="font-medium text-slate-800">Prenotazioni Confermate</h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-slate-600">Numero prenotazioni:</span>
+                            <span className="font-medium">{financialSummary.confirmed_bookings?.count || 0}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-600">Fatturato lordo:</span>
+                            <span className="font-medium">{formatCurrency(financialSummary.confirmed_bookings?.total_gross_amount || 0)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-600">Fatturato netto:</span>
+                            <span className="font-medium">{formatCurrency(financialSummary.confirmed_bookings?.total_net_amount || 0)}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <h4 className="font-medium text-slate-800">Commissioni</h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-slate-600">Commissioni agente:</span>
+                            <span className="font-medium text-green-600">{formatCurrency(financialSummary.confirmed_bookings?.total_agent_commission || 0)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-600">Commissioni fornitore:</span>
+                            <span className="font-medium text-purple-600">{formatCurrency(financialSummary.confirmed_bookings?.total_supplier_commission || 0)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-600">Sconti totali:</span>
+                            <span className="font-medium text-orange-600">{formatCurrency(financialSummary.confirmed_bookings?.total_discounts || 0)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <h4 className="font-medium text-slate-800">Statistiche</h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-slate-600">Viaggi totali:</span>
+                            <span className="font-medium">{financialSummary.stats?.total_trips || 0}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-600">Pending:</span>
+                            <span className="font-medium">{financialSummary.pending_bookings?.count || 0}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-600">Senza dati finanziari:</span>
+                            <span className="font-medium">{financialSummary.stats?.trips_without_financial_data || 0}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
                       <div className="space-y-4">
                         {financialSummary.confirmed_booking_details.map((booking) => (
                           <div key={booking.trip_id} className="border border-slate-200 rounded-lg p-4">
