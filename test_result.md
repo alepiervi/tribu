@@ -191,11 +191,11 @@ backend:
 
   - task: "API modifica note clienti"
     implemented: true
-    working: "needs_testing"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 1
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         -working: false
         -agent: "user"
@@ -203,6 +203,9 @@ backend:
         -working: "needs_testing"
         -agent: "main"
         -comment: "Modificati endpoint notes per permettere visibilità admin/agent e edit per tutti i ruoli autorizzati"
+        -working: true
+        -agent: "testing"
+        -comment: "✅ TESTATO COMPLETAMENTE: Endpoint /api/notes/all funziona perfettamente. Admin e Agent possono vedere tutte le note clienti. Admin e Agent possono modificare le note. Client non può accedere all'endpoint (403 Forbidden corretto). Visibilità e permessi implementati correttamente."
 
   - task: "API richiesta preventivo"
     implemented: true
