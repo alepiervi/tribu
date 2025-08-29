@@ -336,11 +336,11 @@ frontend:
 
   - task: "UserManagement client not found"
     implemented: true
-    working: "needs_retesting"
+    working: false
     file: "/app/frontend/src/components/UserManagement.js"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         -working: false
         -agent: "user"
@@ -351,6 +351,9 @@ frontend:
         -working: "needs_retesting"
         -agent: "main"
         -comment: "CORRETTO: Aggiunti endpoint mancanti /users/{id}/block, /users/{id}/unblock, /users/{id}/delete per supportare tutte le funzioni UserManagement"
+        -working: false
+        -agent: "testing"
+        -comment: "❌ CRITICO: Interface carica ma 0 user cards mostrate, funzioni block/delete non visibili. API /users restituisce 401 Unauthorized. Problemi di autenticazione impediscono caricamento lista utenti."
 
 metadata:
   created_by: "main_agent"
