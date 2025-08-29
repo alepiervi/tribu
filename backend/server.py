@@ -1435,7 +1435,7 @@ async def update_trip_status(
         raise HTTPException(status_code=403, detail="Not authorized to update this trip")
     
     new_status = status_data.get("status")
-    if new_status not in ["draft", "active", "completed", "cancelled"]:
+    if new_status not in ["draft", "active", "confirmed", "completed", "cancelled"]:
         raise HTTPException(status_code=400, detail="Invalid status")
     
     update_data = {
@@ -1444,10 +1444,10 @@ async def update_trip_status(
         "updated_by": current_user["id"]
     }
     
-    # If activating a trip, ensure it has minimum required data
-    if new_status == "active":
+    # If activating or confirming a trip, ensure it has minimum required data
+    if new_status in ["active", "confirmed"]:
         if not trip.get("title") or not trip.get("client_id"):
-            raise HTTPException(status_code=400, detail="Trip must have title and client to be activated")
+            raise HTTPException(status_code=400, detail="Trip must have title and client to be activated/confirmed")
     
     await db.trips.update_one({"id": trip_id}, {"$set": update_data})
     return {"message": f"Trip status updated to {new_status}"}
