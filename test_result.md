@@ -237,6 +237,21 @@ backend:
         -agent: "testing"
         -comment: "Sistema richieste preventivo completamente funzionale per tutti i ruoli"
 
+  - task: "Nuovi endpoint dettagli cliente"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        -working: "needs_testing"
+        -agent: "main"
+        -comment: "Implementati nuovi endpoint /clients/{client_id}/details e /clients/{client_id}/financial-summary per risolvere errore 'cliente non trovato'"
+        -working: true
+        -agent: "testing"
+        -comment: "NUOVI ENDPOINT CLIENT DETAILS TESTATI: GET /api/clients/{client_id}/details e GET /api/clients/{client_id}/financial-summary funzionano perfettamente. Risolvono completamente l'errore 'cliente non trovato' e forniscono tutte le informazioni finanziarie richieste (fatturato €2200, commissioni fornitore €88, commissioni agente €212, sconti €100). Autorizzazioni corrette (admin/agent accesso, client bloccato). 87/88 test passati, 1 problema minore su validazione."
+
 frontend:
   - task: "TripView modifica itinerario/cruise"
     implemented: true
