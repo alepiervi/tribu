@@ -818,6 +818,158 @@ class TravelAgencyAPITester:
 
         return True
 
+    def test_orphaned_data_cleanup(self):
+        """Test orphaned data cleanup for financial reports (REVIEW REQUEST)"""
+        print("\n🧹 Testing Orphaned Data Cleanup (REVIEW REQUEST)...")
+        print("🎯 Testing cleanup of orphaned data that causes financial reports to show ghost data")
+        
+        if not self.admin_token:
+            print("❌ Skipping orphaned data cleanup tests - no admin token")
+            return False
+
+        # STEP 1: Check current state - GET /api/reports/financial?year=2025
+        print("\n📊 STEP 1: Checking current financial data state (year=2025)...")
+        success, initial_report = self.make_request('GET', 'reports/financial?year=2025', token=self.admin_token)
+        
+        if success:
+            self.log_test("GET /api/reports/financial?year=2025 (initial check)", True)
+            
+            initial_totals = initial_report.get('totals', {})
+            initial_trips = initial_totals.get('total_trips', 0)
+            initial_revenue = initial_totals.get('gross_revenue', 0)
+            
+            print(f"   📈 Initial state: {initial_trips} trips, €{initial_revenue} revenue")
+            
+            if initial_trips > 0:
+                print(f"   ⚠️  Found {initial_trips} trips in financial data - potential orphaned data detected")
+            else:
+                print("   ✅ No financial data found - system is clean")
+                
+        else:
+            self.log_test("GET /api/reports/financial?year=2025 (initial check)", False, str(initial_report))
+            return False
+
+        # STEP 2: Execute cleanup - POST /api/admin/cleanup-orphaned-data
+        print("\n🧹 STEP 2: Executing orphaned data cleanup...")
+        success, cleanup_result = self.make_request('POST', 'admin/cleanup-orphaned-data', {}, token=self.admin_token)
+        
+        if success:
+            self.log_test("POST /api/admin/cleanup-orphaned-data", True)
+            
+            # Check cleanup results
+            if 'deleted_counts' in cleanup_result:
+                deleted_counts = cleanup_result['deleted_counts']
+                print(f"   🗑️  Cleanup results:")
+                for data_type, count in deleted_counts.items():
+                    if count > 0:
+                        print(f"      - {data_type}: {count} records deleted")
+                
+                total_deleted = sum(deleted_counts.values())
+                if total_deleted > 0:
+                    self.log_test(f"Cleanup removed {total_deleted} orphaned records", True)
+                else:
+                    self.log_test("No orphaned data found to cleanup", True)
+            else:
+                self.log_test("Cleanup response structure", False, "Missing deleted_counts in response")
+                
+        else:
+            self.log_test("POST /api/admin/cleanup-orphaned-data", False, str(cleanup_result))
+            return False
+
+        # STEP 3: Verify after cleanup - GET /api/reports/financial?year=2025
+        print("\n🔍 STEP 3: Verifying financial data after cleanup...")
+        success, final_report = self.make_request('GET', 'reports/financial?year=2025', token=self.admin_token)
+        
+        if success:
+            self.log_test("GET /api/reports/financial?year=2025 (after cleanup)", True)
+            
+            final_totals = final_report.get('totals', {})
+            final_trips = final_totals.get('total_trips', 0)
+            final_revenue = final_totals.get('gross_revenue', 0)
+            
+            print(f"   📉 Final state: {final_trips} trips, €{final_revenue} revenue")
+            
+            # Verify cleanup was effective
+            if final_trips == 0 and final_revenue == 0:
+                self.log_test("Financial reports show 0 after cleanup (SUCCESS)", True)
+                print("   ✅ SUCCESS: No ghost data remaining in financial reports")
+            elif final_trips < initial_trips or final_revenue < initial_revenue:
+                self.log_test("Cleanup reduced orphaned data (PARTIAL SUCCESS)", True)
+                print(f"   ⚠️  PARTIAL: Reduced from {initial_trips} to {final_trips} trips")
+            else:
+                self.log_test("Cleanup had no effect on financial data", False, "Data unchanged after cleanup")
+                
+        else:
+            self.log_test("GET /api/reports/financial?year=2025 (after cleanup)", False, str(final_report))
+
+        # STEP 4: Test complete trip deletion (if trips remain)
+        print("\n🗑️  STEP 4: Testing complete trip deletion removes financial data...")
+        
+        # Get current trips to test deletion
+        success, trips_result = self.make_request('GET', 'trips', token=self.admin_token)
+        if success and trips_result:
+            print(f"   📋 Found {len(trips_result)} trips in system")
+            
+            # If there are trips, test deleting one to verify cascade deletion
+            if len(trips_result) > 0:
+                test_trip = trips_result[0]
+                trip_id = test_trip['id']
+                trip_title = test_trip.get('title', 'Unknown')
+                
+                print(f"   🎯 Testing deletion of trip: {trip_title} (ID: {trip_id})")
+                
+                # Check if this trip has financial data
+                success, trip_admin = self.make_request('GET', f'trips/{trip_id}/admin', token=self.admin_token)
+                has_financial_data = success and trip_admin is not None
+                
+                if has_financial_data:
+                    print(f"   💰 Trip has financial data - testing cascade deletion")
+                
+                # Delete the trip
+                success, delete_result = self.make_request('DELETE', f'trips/{trip_id}', token=self.admin_token)
+                
+                if success:
+                    self.log_test("Delete trip with cascade deletion", True)
+                    
+                    if 'deleted_counts' in delete_result:
+                        deleted_counts = delete_result['deleted_counts']
+                        financial_deleted = deleted_counts.get('financial_records', 0)
+                        
+                        if has_financial_data and financial_deleted > 0:
+                            self.log_test("Trip deletion removes financial data (CASCADE SUCCESS)", True)
+                            print(f"      ✅ Deleted {financial_deleted} financial records")
+                        elif not has_financial_data:
+                            self.log_test("Trip deletion (no financial data to remove)", True)
+                        else:
+                            self.log_test("Trip deletion failed to remove financial data", False, "Financial data not deleted")
+                            
+                        # Show all deleted data
+                        for data_type, count in deleted_counts.items():
+                            if count > 0:
+                                print(f"      - {data_type}: {count} records")
+                                
+                    # Verify financial reports updated after trip deletion
+                    success, post_delete_report = self.make_request('GET', 'reports/financial?year=2025', token=self.admin_token)
+                    if success:
+                        post_delete_totals = post_delete_report.get('totals', {})
+                        post_delete_trips = post_delete_totals.get('total_trips', 0)
+                        
+                        if post_delete_trips < final_trips:
+                            self.log_test("Financial reports updated after trip deletion", True)
+                            print(f"      📉 Financial trips reduced from {final_trips} to {post_delete_trips}")
+                        else:
+                            self.log_test("Financial reports not updated after trip deletion", False, "Trip count unchanged")
+                    
+                else:
+                    self.log_test("Delete trip", False, str(delete_result))
+            else:
+                print("   ℹ️  No trips available to test deletion")
+        else:
+            print("   ℹ️  Could not retrieve trips list for deletion test")
+
+        print("\n✅ ORPHANED DATA CLEANUP TESTING COMPLETED")
+        return True
+
     def test_new_client_details_endpoints(self):
         """Test NEW client details endpoints to solve 'client not found' issue"""
         print("\n🆕 Testing NEW Client Details Endpoints (REVIEW REQUEST)...")
